@@ -3,7 +3,7 @@ import { Injectable, PipeTransform, ArgumentMetadata, BadRequestException, Inter
 
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
-  constructor(private readonly schema: zod.ZodSchema) {}
+  constructor(private readonly schema: zod.ZodSchema) { }
 
   transform(value: unknown, _metadata: ArgumentMetadata) {
     try {
@@ -16,9 +16,13 @@ export class ZodValidationPipe implements PipeTransform {
   }
 
   private formatIssues(issues: zod.core.$ZodIssue[]): Record<string, string> {
-    return issues.reduce((acc, issue) => {
+    const errors: Record<string, string> = {}
+
+    for (const issue of issues) {
       const fieldName = issue.path.join('.')
-      return { ...acc, [fieldName]: issue.message }
-    }, {})
+      errors[fieldName] = issue.message
+    }
+
+    return errors
   }
 }

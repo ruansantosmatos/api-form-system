@@ -4,8 +4,8 @@ import { AuthController } from './auth.controller'
 import { TokenModule } from '../shared/modules/token.module'
 
 @Module({
-  imports: [TokenModule],
   exports: [AuthService],
+  imports: [TokenModule],
   providers: [AuthService],
   controllers: [AuthController],
 })

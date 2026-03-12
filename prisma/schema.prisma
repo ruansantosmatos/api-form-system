@@ -21,16 +21,18 @@ model User {
 }
 
 model Session {
-  id           Int       @id() @default(autoincrement())
-  userId       Int
-  refreshToken String    @unique() @db.VarChar(255)
-  userAgent    String?
-  ipAddress    String?
-  isValid      Boolean   @default(true)
-  createdAt    DateTime? @default(now())
-  updatedAt    DateTime?
-  expiresAt    DateTime
-  user         User      @relation(fields: [userId], references: [id])
+  id                       Int       @id() @default(autoincrement())
+  user_id                  Int
+  refresh_token_hash       String    @unique() @db.VarChar(255)
+  user_agent               String?
+  ip_address               String?
+  is_valid                 Boolean   @default(true)
+  created_at               DateTime? @default(now())
+  updated_at               DateTime?
+  refresh_token_expires_at DateTime
+  absolutely_expires_at    DateTime
+  rotation_counter         Int       @default(0)
+  user                     User      @relation(fields: [user_id], references: [id])
 
   @@map("sessions")
 }

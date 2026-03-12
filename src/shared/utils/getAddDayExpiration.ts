@@ -1,1 +1,5 @@
-export const getAddDayExpiration = (day: number) => new Date(Date.now() + day * 24 * 60 * 60 * 1000)
+export const getAddDayExpiration = (days: number): string => {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
+}
