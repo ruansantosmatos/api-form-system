@@ -3,7 +3,7 @@ import { Injectable, PipeTransform, ArgumentMetadata, BadRequestException, Inter
 
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
-  constructor(private readonly schema: zod.ZodSchema) { }
+  constructor(private readonly schema: zod.ZodSchema) {}
 
   transform(value: unknown, _metadata: ArgumentMetadata) {
     try {

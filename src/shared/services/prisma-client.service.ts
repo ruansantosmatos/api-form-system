@@ -12,7 +12,7 @@ export class PrismaClientService extends PrismaClient {
       password: process.env.DATABASE_PASSWORD,
       port: parseInt(process.env.PORT_DATABASE || '3306'),
       connectionLimit: 5,
-    });
+    })
     super({ adapter })
   }
 }
