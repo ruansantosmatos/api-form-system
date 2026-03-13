@@ -11,7 +11,19 @@ export class AuthService {
     private readonly prisma: PrismaClientService,
     private readonly sessionService: SessionService,
     private readonly securityService: SecurityService,
-  ) { }
+  ) {}
+
+  async logout(sessionId: number) {
+    const now = new Date()
+    const reason = REVOCATION.LOGOUT
+
+    const revocation: AuthRevocationSession = { is_valid: false, updated_at: now, revocation_reason: reason }
+    const session = await this.prisma.session.findUnique({ where: { id: sessionId } })
+
+    if (!session) throw new BadRequestException('Session not found.')
+    await this.prisma.session.update({ where: { id: sessionId }, data: revocation })
+    return { message: 'Logged out successfully.' }
+  }
 
   async signIn(ipAddress: string, userAgent: string, data: AuthLoginData) {
     const { email, password } = data

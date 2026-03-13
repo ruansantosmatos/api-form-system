@@ -1,7 +1,7 @@
 import { AuthService } from './auth.service'
+import * as authLogoutDto from './dto/auth-logout.dto'
 import { ZodBody } from '../shared/decorators/zod-body.decorator'
 import { UserAgent } from 'src/shared/decorators/user-agent.decorator'
-import { SessionId } from 'src/shared/decorators/session-id.decorator'
 import { authLoginSchema, type AuthLoginDto } from './dto/auth-login.dto'
 import { SessionHeaderGuard } from 'src/shared/guards/session-header.guard'
 import { Controller, Injectable, Ip, Post, UseGuards } from '@nestjs/common'
@@ -12,6 +12,12 @@ import { createRegisterSchema, type CreateRegisterDto } from './dto/create-regis
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('logout')
+  logout(@ZodBody(authLogoutDto.authLogoutSchema) body: authLogoutDto.AuthLogoutDto) {
+    const response = this.authService.logout(body.session_id)
+    return response
+  }
 
   @Post('login')
   async login(@Ip() ip: string, @UserAgent() userAgent: string, @ZodBody(authLoginSchema) body: AuthLoginDto) {
@@ -26,9 +32,8 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @UseGuards(SessionHeaderGuard)
-  refresh(@SessionId() sessionId: number, @ZodBody(authRefreshSchema) body: AuthRefreshDto) {
-    const refreshSession = this.authService.refresh(sessionId, body.refresh_token)
+  refresh(@ZodBody(authRefreshSchema) body: AuthRefreshDto) {
+    const refreshSession = this.authService.refresh(body.session_id, body.refresh_token)
     return refreshSession
   }
 }
