@@ -3,7 +3,37 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client"
-  output   = "./client"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
+model User {
+  id        Int       @id() @default(autoincrement())
+  name      String    @db.VarChar(80)
+  email     String    @unique() @db.VarChar(80)
+  password  String    @db.VarChar(255)
+  createdAt DateTime? @default(now())
+  updatedAt DateTime?
+  sessions  Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id                       Int       @id() @default(autoincrement())
+  user_id                  Int
+  refresh_token_hash       String    @unique() @db.VarChar(255)
+  user_agent               String?
+  ip_address               String?
+  is_valid                 Boolean   @default(true)
+  created_at               DateTime? @default(now())
+  updated_at               DateTime?
+  refresh_token_expires_at DateTime
+  absolutely_expires_at    DateTime
+  rotation_counter         Int       @default(0)
+  revocation_reason        String?
+  user                     User      @relation(fields: [user_id], references: [id])
+
+  @@map("sessions")
+}
