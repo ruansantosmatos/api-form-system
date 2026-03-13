@@ -49,6 +49,7 @@ export type SessionMinAggregateOutputType = {
   refresh_token_expires_at: Date | null
   absolutely_expires_at: Date | null
   rotation_counter: number | null
+  revocation_reason: string | null
 }
 
 export type SessionMaxAggregateOutputType = {
@@ -63,6 +64,7 @@ export type SessionMaxAggregateOutputType = {
   refresh_token_expires_at: Date | null
   absolutely_expires_at: Date | null
   rotation_counter: number | null
+  revocation_reason: string | null
 }
 
 export type SessionCountAggregateOutputType = {
@@ -77,6 +79,7 @@ export type SessionCountAggregateOutputType = {
   refresh_token_expires_at: number
   absolutely_expires_at: number
   rotation_counter: number
+  revocation_reason: number
   _all: number
 }
 
@@ -104,6 +107,7 @@ export type SessionMinAggregateInputType = {
   refresh_token_expires_at?: true
   absolutely_expires_at?: true
   rotation_counter?: true
+  revocation_reason?: true
 }
 
 export type SessionMaxAggregateInputType = {
@@ -118,6 +122,7 @@ export type SessionMaxAggregateInputType = {
   refresh_token_expires_at?: true
   absolutely_expires_at?: true
   rotation_counter?: true
+  revocation_reason?: true
 }
 
 export type SessionCountAggregateInputType = {
@@ -132,6 +137,7 @@ export type SessionCountAggregateInputType = {
   refresh_token_expires_at?: true
   absolutely_expires_at?: true
   rotation_counter?: true
+  revocation_reason?: true
   _all?: true
 }
 
@@ -230,6 +236,7 @@ export type SessionGroupByOutputType = {
   refresh_token_expires_at: Date
   absolutely_expires_at: Date
   rotation_counter: number
+  revocation_reason: string | null
   _count: SessionCountAggregateOutputType | null
   _avg: SessionAvgAggregateOutputType | null
   _sum: SessionSumAggregateOutputType | null
@@ -264,6 +271,7 @@ export type SessionWhereInput = {
   refresh_token_expires_at?: Prisma.DateTimeFilter<'Session'> | Date | string
   absolutely_expires_at?: Prisma.DateTimeFilter<'Session'> | Date | string
   rotation_counter?: Prisma.IntFilter<'Session'> | number
+  revocation_reason?: Prisma.StringNullableFilter<'Session'> | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
 
@@ -279,6 +287,7 @@ export type SessionOrderByWithRelationInput = {
   refresh_token_expires_at?: Prisma.SortOrder
   absolutely_expires_at?: Prisma.SortOrder
   rotation_counter?: Prisma.SortOrder
+  revocation_reason?: Prisma.SortOrderInput | Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
   _relevance?: Prisma.SessionOrderByRelevanceInput
 }
@@ -299,6 +308,7 @@ export type SessionWhereUniqueInput = Prisma.AtLeast<
     refresh_token_expires_at?: Prisma.DateTimeFilter<'Session'> | Date | string
     absolutely_expires_at?: Prisma.DateTimeFilter<'Session'> | Date | string
     rotation_counter?: Prisma.IntFilter<'Session'> | number
+    revocation_reason?: Prisma.StringNullableFilter<'Session'> | string | null
     user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   },
   'id' | 'refresh_token_hash'
@@ -316,6 +326,7 @@ export type SessionOrderByWithAggregationInput = {
   refresh_token_expires_at?: Prisma.SortOrder
   absolutely_expires_at?: Prisma.SortOrder
   rotation_counter?: Prisma.SortOrder
+  revocation_reason?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.SessionCountOrderByAggregateInput
   _avg?: Prisma.SessionAvgOrderByAggregateInput
   _max?: Prisma.SessionMaxOrderByAggregateInput
@@ -338,6 +349,7 @@ export type SessionScalarWhereWithAggregatesInput = {
   refresh_token_expires_at?: Prisma.DateTimeWithAggregatesFilter<'Session'> | Date | string
   absolutely_expires_at?: Prisma.DateTimeWithAggregatesFilter<'Session'> | Date | string
   rotation_counter?: Prisma.IntWithAggregatesFilter<'Session'> | number
+  revocation_reason?: Prisma.StringNullableWithAggregatesFilter<'Session'> | string | null
 }
 
 export type SessionCreateInput = {
@@ -350,6 +362,7 @@ export type SessionCreateInput = {
   refresh_token_expires_at: Date | string
   absolutely_expires_at: Date | string
   rotation_counter?: number
+  revocation_reason?: string | null
   user: Prisma.UserCreateNestedOneWithoutSessionsInput
 }
 
@@ -365,6 +378,7 @@ export type SessionUncheckedCreateInput = {
   refresh_token_expires_at: Date | string
   absolutely_expires_at: Date | string
   rotation_counter?: number
+  revocation_reason?: string | null
 }
 
 export type SessionUpdateInput = {
@@ -377,6 +391,7 @@ export type SessionUpdateInput = {
   refresh_token_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   absolutely_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotation_counter?: Prisma.IntFieldUpdateOperationsInput | number
+  revocation_reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutSessionsNestedInput
 }
 
@@ -392,6 +407,7 @@ export type SessionUncheckedUpdateInput = {
   refresh_token_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   absolutely_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotation_counter?: Prisma.IntFieldUpdateOperationsInput | number
+  revocation_reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SessionCreateManyInput = {
@@ -406,6 +422,7 @@ export type SessionCreateManyInput = {
   refresh_token_expires_at: Date | string
   absolutely_expires_at: Date | string
   rotation_counter?: number
+  revocation_reason?: string | null
 }
 
 export type SessionUpdateManyMutationInput = {
@@ -418,6 +435,7 @@ export type SessionUpdateManyMutationInput = {
   refresh_token_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   absolutely_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotation_counter?: Prisma.IntFieldUpdateOperationsInput | number
+  revocation_reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SessionUncheckedUpdateManyInput = {
@@ -432,6 +450,7 @@ export type SessionUncheckedUpdateManyInput = {
   refresh_token_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   absolutely_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotation_counter?: Prisma.IntFieldUpdateOperationsInput | number
+  revocation_reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SessionListRelationFilter = {
@@ -462,6 +481,7 @@ export type SessionCountOrderByAggregateInput = {
   refresh_token_expires_at?: Prisma.SortOrder
   absolutely_expires_at?: Prisma.SortOrder
   rotation_counter?: Prisma.SortOrder
+  revocation_reason?: Prisma.SortOrder
 }
 
 export type SessionAvgOrderByAggregateInput = {
@@ -482,6 +502,7 @@ export type SessionMaxOrderByAggregateInput = {
   refresh_token_expires_at?: Prisma.SortOrder
   absolutely_expires_at?: Prisma.SortOrder
   rotation_counter?: Prisma.SortOrder
+  revocation_reason?: Prisma.SortOrder
 }
 
 export type SessionMinOrderByAggregateInput = {
@@ -496,6 +517,7 @@ export type SessionMinOrderByAggregateInput = {
   refresh_token_expires_at?: Prisma.SortOrder
   absolutely_expires_at?: Prisma.SortOrder
   rotation_counter?: Prisma.SortOrder
+  revocation_reason?: Prisma.SortOrder
 }
 
 export type SessionSumOrderByAggregateInput = {
@@ -580,6 +602,7 @@ export type SessionCreateWithoutUserInput = {
   refresh_token_expires_at: Date | string
   absolutely_expires_at: Date | string
   rotation_counter?: number
+  revocation_reason?: string | null
 }
 
 export type SessionUncheckedCreateWithoutUserInput = {
@@ -593,6 +616,7 @@ export type SessionUncheckedCreateWithoutUserInput = {
   refresh_token_expires_at: Date | string
   absolutely_expires_at: Date | string
   rotation_counter?: number
+  revocation_reason?: string | null
 }
 
 export type SessionCreateOrConnectWithoutUserInput = {
@@ -636,6 +660,7 @@ export type SessionScalarWhereInput = {
   refresh_token_expires_at?: Prisma.DateTimeFilter<'Session'> | Date | string
   absolutely_expires_at?: Prisma.DateTimeFilter<'Session'> | Date | string
   rotation_counter?: Prisma.IntFilter<'Session'> | number
+  revocation_reason?: Prisma.StringNullableFilter<'Session'> | string | null
 }
 
 export type SessionCreateManyUserInput = {
@@ -649,6 +674,7 @@ export type SessionCreateManyUserInput = {
   refresh_token_expires_at: Date | string
   absolutely_expires_at: Date | string
   rotation_counter?: number
+  revocation_reason?: string | null
 }
 
 export type SessionUpdateWithoutUserInput = {
@@ -661,6 +687,7 @@ export type SessionUpdateWithoutUserInput = {
   refresh_token_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   absolutely_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotation_counter?: Prisma.IntFieldUpdateOperationsInput | number
+  revocation_reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SessionUncheckedUpdateWithoutUserInput = {
@@ -674,6 +701,7 @@ export type SessionUncheckedUpdateWithoutUserInput = {
   refresh_token_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   absolutely_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotation_counter?: Prisma.IntFieldUpdateOperationsInput | number
+  revocation_reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SessionUncheckedUpdateManyWithoutUserInput = {
@@ -687,6 +715,7 @@ export type SessionUncheckedUpdateManyWithoutUserInput = {
   refresh_token_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   absolutely_expires_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rotation_counter?: Prisma.IntFieldUpdateOperationsInput | number
+  revocation_reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> =
@@ -703,6 +732,7 @@ export type SessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
       refresh_token_expires_at?: boolean
       absolutely_expires_at?: boolean
       rotation_counter?: boolean
+      revocation_reason?: boolean
       user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
     },
     ExtArgs['result']['session']
@@ -720,6 +750,7 @@ export type SessionSelectScalar = {
   refresh_token_expires_at?: boolean
   absolutely_expires_at?: boolean
   rotation_counter?: boolean
+  revocation_reason?: boolean
 }
 
 export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> =
@@ -734,7 +765,8 @@ export type SessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
     | 'updated_at'
     | 'refresh_token_expires_at'
     | 'absolutely_expires_at'
-    | 'rotation_counter',
+    | 'rotation_counter'
+    | 'revocation_reason',
     ExtArgs['result']['session']
   >
 export type SessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -759,6 +791,7 @@ export type $SessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
       refresh_token_expires_at: Date
       absolutely_expires_at: Date
       rotation_counter: number
+      revocation_reason: string | null
     },
     ExtArgs['result']['session']
   >
@@ -1208,6 +1241,7 @@ export interface SessionFieldRefs {
   readonly refresh_token_expires_at: Prisma.FieldRef<'Session', 'DateTime'>
   readonly absolutely_expires_at: Prisma.FieldRef<'Session', 'DateTime'>
   readonly rotation_counter: Prisma.FieldRef<'Session', 'Int'>
+  readonly revocation_reason: Prisma.FieldRef<'Session', 'String'>
 }
 
 // Custom InputTypes

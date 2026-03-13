@@ -560,6 +560,7 @@ export const SessionScalarFieldEnum = {
   refresh_token_expires_at: 'refresh_token_expires_at',
   absolutely_expires_at: 'absolutely_expires_at',
   rotation_counter: 'rotation_counter',
+  revocation_reason: 'revocation_reason',
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -590,6 +591,7 @@ export const SessionOrderByRelevanceFieldEnum = {
   refresh_token_hash: 'refresh_token_hash',
   user_agent: 'user_agent',
   ip_address: 'ip_address',
+  revocation_reason: 'revocation_reason',
 } as const
 
 export type SessionOrderByRelevanceFieldEnum = (typeof SessionOrderByRelevanceFieldEnum)[keyof typeof SessionOrderByRelevanceFieldEnum]

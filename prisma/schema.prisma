@@ -32,6 +32,7 @@ model Session {
   refresh_token_expires_at DateTime
   absolutely_expires_at    DateTime
   rotation_counter         Int       @default(0)
+  revocation_reason        String?
   user                     User      @relation(fields: [user_id], references: [id])
 
   @@map("sessions")
