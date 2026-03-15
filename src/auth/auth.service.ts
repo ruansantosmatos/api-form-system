@@ -3,7 +3,7 @@ import { SessionService } from 'src/shared/services/session.service'
 import { SecurityService } from '../shared/services/security.service'
 import { PrismaClientService } from '../shared/services/prisma-client.service'
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
-import { AuthRegisterData, AuthLoginData, AuthRevocationSession } from './interface/auth.interface'
+import { AuthRevocationSession, AuthServiceLogin, AuthServiceSignGoogle, AuthServiceSignUp } from './interface/auth.interface'
 
 @Injectable()
 export class AuthService {
@@ -25,8 +25,27 @@ export class AuthService {
     return { message: 'Logged out successfully.' }
   }
 
-  async signIn(ipAddress: string, userAgent: string, data: AuthLoginData) {
+  async signInGoogle({ client, credential }: AuthServiceSignGoogle) {
+    const { email, email_verified } = credential
+    const { ip: ipAddress, userAgent } = client
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, name: true, email: true },
+    })
+
+    if (!user) throw new BadRequestException('No user associated with this Google account.')
+
+    if (!email_verified) throw new UnauthorizedException('Google account email not verified.')
+
+    const session = await this.sessionService.create(user.id, ipAddress, userAgent)
+    const response = { user: { ...user }, session: session }
+    return { data: response }
+  }
+
+  async signIn({ client, data }: AuthServiceLogin) {
     const { email, password } = data
+    const { ip: ipAddress, userAgent } = client
 
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -43,11 +62,13 @@ export class AuthService {
     return { data: response }
   }
 
-  async signUp(ipAddress: string, userAgent: string, data: AuthRegisterData) {
+  async signUp({ client, data }: AuthServiceSignUp) {
     const { email, password } = data
-    const user = await this.prisma.user.findUnique({ where: { email } })
+    const { ip: ipAddress, userAgent } = client
 
+    const user = await this.prisma.user.findUnique({ where: { email } })
     const hashedPassword = await this.securityService.hash(password)
+
     if (user) throw new BadRequestException('Email address unavailable for use.')
 
     const newUser = await this.prisma.user.create({

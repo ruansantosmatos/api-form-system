@@ -1,12 +1,13 @@
 import { AuthService } from './auth.service'
-import * as authLogoutDto from './dto/auth-logout.dto'
 import { ZodBody } from '../shared/decorators/zod-body.decorator'
-import { UserAgent } from 'src/shared/decorators/user-agent.decorator'
-import { authLoginSchema, type AuthLoginDto } from './dto/auth-login.dto'
-import { SessionHeaderGuard } from 'src/shared/guards/session-header.guard'
-import { Controller, Injectable, Ip, Post, UseGuards } from '@nestjs/common'
+import { GoogleAuthGuard } from 'src/shared/guards/google-auth.guard'
+import { ClientInfo } from 'src/shared/decorators/client-info.decorator'
+import { type AuthLogoutDto, authLogoutSchema } from './dto/auth-logout.dto'
 import { type AuthRefreshDto, authRefreshSchema } from './dto/auth-refresh.dto'
+import { type ClientInfoType } from 'src/shared/types/client-info.decorator.type'
+import { Body, Controller, Injectable, Ip, Post, UseGuards } from '@nestjs/common'
 import { createRegisterSchema, type CreateRegisterDto } from './dto/create-register.dto'
+import { type AuthGoogleLoginDto, authLoginSchema, type AuthLoginDto } from './dto/auth-login.dto'
 
 @Injectable()
 @Controller('auth')
@@ -14,20 +15,28 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('logout')
-  logout(@ZodBody(authLogoutDto.authLogoutSchema) body: authLogoutDto.AuthLogoutDto) {
+  logout(@ZodBody(authLogoutSchema) body: AuthLogoutDto) {
     const response = this.authService.logout(body.session_id)
     return response
   }
 
   @Post('login')
-  async login(@Ip() ip: string, @UserAgent() userAgent: string, @ZodBody(authLoginSchema) body: AuthLoginDto) {
-    const session = await this.authService.signIn(ip, userAgent, body)
+  async login(@ClientInfo() client: ClientInfoType, @ZodBody(authLoginSchema) body: AuthLoginDto) {
+    const session = await this.authService.signIn({ client, data: body })
+    return session
+  }
+
+  @Post('google')
+  @UseGuards(GoogleAuthGuard)
+  async googleLogin(@ClientInfo() client: ClientInfoType, @Body() body: AuthGoogleLoginDto) {
+    const credential = body.credential
+    const session = await this.authService.signInGoogle({ client, credential: credential })
     return session
   }
 
   @Post('register')
-  async register(@Ip() ip: string, @UserAgent() userAgent: string, @ZodBody(createRegisterSchema) body: CreateRegisterDto) {
-    const session = await this.authService.signUp(ip, userAgent, body)
+  async register(@ClientInfo() client: ClientInfoType, @ZodBody(createRegisterSchema) body: CreateRegisterDto) {
+    const session = await this.authService.signUp({ client, data: body })
     return session
   }
 
