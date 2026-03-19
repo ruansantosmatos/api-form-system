@@ -1,6 +1,6 @@
 import { TokenPayload } from 'google-auth-library'
 import { Session } from 'src/generated/prisma/client'
-import { ClientInfoType } from 'src/shared/types/client-info.decorator.type'
+import { ClientInfoType } from 'src/shared/types/client-info.type'
 
 export type AuthRevocationSession = Pick<Session, 'is_valid' | 'updated_at' | 'revocation_reason'>
 

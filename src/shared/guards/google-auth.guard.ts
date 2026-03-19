@@ -3,7 +3,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 
 @Injectable()
 export class GoogleAuthGuard implements CanActivate {
-  constructor(private googleAuthService: GoogleAuthService) {}
+  constructor(private readonly googleAuthService: GoogleAuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest()

@@ -9,13 +9,13 @@ generator client {
 }
 
 model User {
-  id        Int       @id() @default(autoincrement())
-  name      String    @db.VarChar(80)
-  email     String    @unique() @db.VarChar(80)
-  password  String    @db.VarChar(255)
-  createdAt DateTime? @default(now())
-  updatedAt DateTime?
-  sessions  Session[]
+  id          Int          @id() @default(autoincrement())
+  name        String       @db.VarChar(80)
+  email       String       @unique() @db.VarChar(80)
+  createdAt   DateTime?    @default(now())
+  updatedAt   DateTime?
+  sessions    Session[]
+  authMethods AuthMethod[]
 
   @@map("users")
 }
@@ -36,4 +36,17 @@ model Session {
   user                     User      @relation(fields: [user_id], references: [id])
 
   @@map("sessions")
+}
+
+model AuthMethod {
+  id            Int     @id() @default(autoincrement())
+  user_id       Int
+  type          String  @db.VarChar(50)
+  password_hash String? @db.VarChar(255)
+  provider      String? @db.VarChar(50)
+  provider_id   String? @db.VarChar(255)
+  user          User    @relation(fields: [user_id], references: [id])
+
+  @@unique([provider, provider_id])
+  @@map("auth_methods")
 }

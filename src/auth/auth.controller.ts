@@ -1,11 +1,11 @@
 import { AuthService } from './auth.service'
 import { ZodBody } from '../shared/decorators/zod-body.decorator'
 import { GoogleAuthGuard } from 'src/shared/guards/google-auth.guard'
+import { type ClientInfoType } from 'src/shared/types/client-info.type'
 import { ClientInfo } from 'src/shared/decorators/client-info.decorator'
 import { type AuthLogoutDto, authLogoutSchema } from './dto/auth-logout.dto'
+import { Body, Controller, Injectable, Post, UseGuards } from '@nestjs/common'
 import { type AuthRefreshDto, authRefreshSchema } from './dto/auth-refresh.dto'
-import { type ClientInfoType } from 'src/shared/types/client-info.decorator.type'
-import { Body, Controller, Injectable, Ip, Post, UseGuards } from '@nestjs/common'
 import { createRegisterSchema, type CreateRegisterDto } from './dto/create-register.dto'
 import { type AuthGoogleLoginDto, authLoginSchema, type AuthLoginDto } from './dto/auth-login.dto'
 
