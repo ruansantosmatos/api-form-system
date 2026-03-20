@@ -6,7 +6,13 @@ import { SecurityService } from '../shared/services/security.service'
 import { GoogleAuthService } from 'src/shared/services/google-auth.service'
 import { PrismaClientService } from '../shared/services/prisma-client.service'
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
-import { AuthRevocationSession, AuthServiceLogin, AuthServiceSignGoogle, AuthServiceSignUp } from './interface/auth.interface'
+import {
+  AuthRevocationSession,
+  AuthServiceLogin,
+  AuthServiceSignGoogle,
+  AuthServiceSignUp,
+  AuthServiceSignUpGoogle,
+} from './interface/auth.interface'
 
 @Injectable()
 export class AuthService {
@@ -14,8 +20,8 @@ export class AuthService {
     private readonly prisma: PrismaClientService,
     private readonly sessionService: SessionService,
     private readonly securityService: SecurityService,
-    private readonly googleAuthService: GoogleAuthService
-  ) { }
+    private readonly googleAuthService: GoogleAuthService,
+  ) {}
 
   async logout(sessionId: number) {
     const now = new Date()
@@ -69,11 +75,11 @@ export class AuthService {
   async signIn({ client, data }: AuthServiceLogin) {
     const { email, password } = data
     const user = await this.prisma.user.findUnique({ where: { email } })
-    
+
     if (!user) throw new BadRequestException('Invalid email or password.')
 
     const userAuthMethod = await this.prisma.authMethod.findFirst({
-      where: { user_id: user.id, type: AUTH_METHOD.PASSWORD }
+      where: { user_id: user.id, type: AUTH_METHOD.PASSWORD },
     })
 
     if (!userAuthMethod) throw new BadRequestException('Invalid email or password.')
@@ -88,18 +94,51 @@ export class AuthService {
   }
 
   async signUp({ client, data }: AuthServiceSignUp) {
-    const { email, password } = data
+    const { name, email, password } = data
     const user = await this.prisma.user.findUnique({ where: { email } })
 
     if (user) throw new BadRequestException('Email address unavailable for use.')
     const password_hash = await this.securityService.hash(password)
 
-    const newUser = await this.prisma.user.create({ data })
+    const newUser = await this.prisma.user.create({ data: { name, email } })
     const user_id = newUser.id
 
     await this.prisma.authMethod.create({ data: { user_id, type: AUTH_METHOD.PASSWORD, password_hash } })
     const session = await this.sessionService.create({ user_id: newUser.id, client })
 
+    const response = { user: newUser, session: session }
+    return { data: response }
+  }
+
+  async signUpGoogle({ client, credential }: AuthServiceSignUpGoogle) {
+    const { name, email, email_verified, sub: provider_id } = credential
+    const user = await this.prisma.user.findUnique({ where: { email: email } })
+
+    if (!email_verified) throw new UnauthorizedException('Google account email not verified.')
+
+    const authMethod = await this.prisma.authMethod.findFirst({
+      where: { provider_id: provider_id, provider: AUTH_PROVIDER.GOOGLE },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    })
+
+    if (authMethod) {
+      const user_id = authMethod.user.id
+      const session = await this.sessionService.create({ user_id, client })
+      return { data: { user: authMethod.user, session } }
+    }
+
+    if (user) {
+      await this.googleAuthService.bindAuthMethod(user.id, provider_id)
+      const session = await this.sessionService.create({ user_id: user.id, client })
+
+      const response = { user, session }
+      return response
+    }
+
+    const newUser = await this.prisma.user.create({ data: { name: name as string, email: email as string } })
+    await this.googleAuthService.bindAuthMethod(newUser.id, provider_id)
+
+    const session = await this.sessionService.create({ user_id: newUser.id, client })
     const response = { user: newUser, session: session }
     return { data: response }
   }

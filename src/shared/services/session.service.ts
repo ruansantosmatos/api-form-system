@@ -11,7 +11,7 @@ export class SessionService {
     private readonly prisma: PrismaClientService,
     private readonly tokenService: TokenService,
     private readonly securityService: SecurityService,
-  ) { }
+  ) {}
 
   async create({ user_id, client }: CreateSessionType) {
     const expiresAt = getAddDayExpiration(5)
@@ -50,9 +50,9 @@ export class SessionService {
     })
 
     return {
-      ...tokens,
       session_id: updatedSession.id,
       updated_at: updatedSession.updated_at,
+      ...tokens,
     }
   }
 }

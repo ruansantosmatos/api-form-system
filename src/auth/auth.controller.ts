@@ -6,8 +6,8 @@ import { ClientInfo } from 'src/shared/decorators/client-info.decorator'
 import { type AuthLogoutDto, authLogoutSchema } from './dto/auth-logout.dto'
 import { Body, Controller, Injectable, Post, UseGuards } from '@nestjs/common'
 import { type AuthRefreshDto, authRefreshSchema } from './dto/auth-refresh.dto'
-import { createRegisterSchema, type CreateRegisterDto } from './dto/create-register.dto'
 import { type AuthGoogleLoginDto, authLoginSchema, type AuthLoginDto } from './dto/auth-login.dto'
+import { type CreateRegisterGoogleDto, createRegisterSchema, type CreateRegisterDto } from './dto/auth-register.dto'
 
 @Injectable()
 @Controller('auth')
@@ -30,7 +30,15 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   async googleLogin(@ClientInfo() client: ClientInfoType, @Body() body: AuthGoogleLoginDto) {
     const credential = body.credential
-    const session = await this.authService.signInGoogle({ client, credential: credential })
+    const session = await this.authService.signInGoogle({ client, credential })
+    return session
+  }
+
+  @Post('register/google')
+  @UseGuards(GoogleAuthGuard)
+  async googleRegister(@ClientInfo() client: ClientInfoType, @Body() body: CreateRegisterGoogleDto) {
+    const credential = body.credential
+    const session = await this.authService.signUpGoogle({ client, credential })
     return session
   }
 

@@ -9,8 +9,8 @@ import { AUTH_PROVIDER } from '../consts/auth-provider'
 export class GoogleAuthService {
   constructor(
     private readonly prisma: PrismaClientService,
-    private readonly configService: ConfigService
-  ) { }
+    private readonly configService: ConfigService,
+  ) {}
 
   async verifyToken(token: string) {
     const client = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'))
@@ -22,11 +22,11 @@ export class GoogleAuthService {
 
   async bindAuthMethod(userId: number, providerId: string) {
     await this.prisma.authMethod.create({
-      data: { 
-        user_id: userId, 
-        type: AUTH_METHOD.OAUTH, 
-        provider_id: providerId, 
-        provider: AUTH_PROVIDER.GOOGLE
+      data: {
+        user_id: userId,
+        type: AUTH_METHOD.OAUTH,
+        provider_id: providerId,
+        provider: AUTH_PROVIDER.GOOGLE,
       },
     })
   }
