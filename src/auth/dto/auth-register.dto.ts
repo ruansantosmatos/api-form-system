@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { TokenPayload } from 'google-auth-library'
 
 const schema = {
   email: z.email().trim(),
@@ -9,3 +10,7 @@ const schema = {
 export const createRegisterSchema = z.object(schema).required()
 
 export type CreateRegisterDto = z.infer<typeof createRegisterSchema>
+
+export type CreateRegisterGoogleDto = {
+  credential: TokenPayload
+}

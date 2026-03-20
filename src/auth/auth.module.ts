@@ -3,11 +3,12 @@ import { AuthService } from './auth.service'
 import { AuthController } from './auth.controller'
 import { TokenModule } from '../shared/modules/token.module'
 import { SessionModule } from 'src/shared/modules/session.module'
+import { GoogleAuthModule } from 'src/shared/modules/google-auth.module'
 
 @Module({
   exports: [AuthService],
   providers: [AuthService],
   controllers: [AuthController],
-  imports: [TokenModule, SessionModule],
+  imports: [TokenModule, SessionModule, GoogleAuthModule],
 })
 export class AuthModule {}
