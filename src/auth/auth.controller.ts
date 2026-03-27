@@ -1,18 +1,25 @@
+import type { Response } from 'express'
 import { AuthService } from './auth.service'
+import { ConfigService } from '@nestjs/config'
 import { ZodBody } from '../shared/decorators/zod-body.decorator'
+import { getCookieOptions } from 'src/shared/utils/getCookieOptions'
 import { GoogleAuthGuard } from 'src/shared/guards/google-auth.guard'
+import { GithubAuthGuard } from 'src/shared/guards/github-auth.guard'
 import { type ClientInfoType } from 'src/shared/types/client-info.type'
 import { ClientInfo } from 'src/shared/decorators/client-info.decorator'
 import { type AuthLogoutDto, authLogoutSchema } from './dto/auth-logout.dto'
-import { Body, Controller, Injectable, Post, UseGuards } from '@nestjs/common'
 import { type AuthRefreshDto, authRefreshSchema } from './dto/auth-refresh.dto'
+import { Body, Controller, Get, Injectable, Post, Query, Res, UseGuards } from '@nestjs/common'
 import { type AuthGoogleLoginDto, authLoginSchema, type AuthLoginDto } from './dto/auth-login.dto'
 import { type CreateRegisterGoogleDto, createRegisterSchema, type CreateRegisterDto } from './dto/auth-register.dto'
 
 @Injectable()
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('logout')
   logout(@ZodBody(authLogoutSchema) body: AuthLogoutDto) {
@@ -24,6 +31,27 @@ export class AuthController {
   async login(@ClientInfo() client: ClientInfoType, @ZodBody(authLoginSchema) body: AuthLoginDto) {
     const session = await this.authService.signIn({ client, data: body })
     return session
+  }
+
+  @Get('github')
+  async githubLogin(@Res() res: Response) {
+    const { url, state } = await this.authService.redirectToGithub()
+    const cookieOptions = getCookieOptions()
+
+    res.cookie('oauth_state', state, cookieOptions)
+    res.redirect(url)
+  }
+
+  @Get('github/callback')
+  @UseGuards(GithubAuthGuard)
+  async githubCallback(@Res() res: Response, @Query('code') code: string, @ClientInfo() client: ClientInfoType) {
+    const cookieOptions = getCookieOptions()
+    const clientUrl = this.configService.get<string>('CLIENT_URL')
+    const { access_token, refresh_token } = await this.authService.githubLogin({ code, client })
+
+    res.cookie('access_token', access_token, cookieOptions)
+    res.cookie('refresh_token', refresh_token, cookieOptions)
+    res.redirect(`${clientUrl}`)
   }
 
   @Post('google')

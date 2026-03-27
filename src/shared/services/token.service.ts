@@ -11,14 +11,18 @@ export class TokenService {
 
   async generateAuthTokens(data: any) {
     const payload = { sub: data }
+    const JWT_SECRET = this.configService.get<string>('JWT_SECRET')
+    const JWT_REFRESH_SECRET = this.configService.get<string>('JWT_REFRESH_SECRET')
+
+    if (!JWT_SECRET || !JWT_REFRESH_SECRET) throw new Error('JWT secrets not configured.')
 
     const accessTokenOptions: JwtSignOptions = {
-      secret: this.configService.get<string>('JWT_SECRET'),
+      secret: JWT_SECRET,
       expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m') as JwtSignOptions['expiresIn'],
     }
 
     const refreshTokenOptions: JwtSignOptions = {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      secret: JWT_REFRESH_SECRET,
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '5d') as JwtSignOptions['expiresIn'],
     }
 

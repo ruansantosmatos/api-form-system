@@ -25,6 +25,11 @@ export type AuthServiceSignGoogle = {
   credential: TokenPayload
 }
 
+export type AuthServiceSignGithub = {
+  code: string
+  client: ClientInfoType
+}
+
 export type AuthServiceSignUp = {
   client: ClientInfoType
   data: AuthRegisterData

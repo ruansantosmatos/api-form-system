@@ -16,6 +16,8 @@ export class GoogleAuthService {
     const client = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'))
     const audience = this.configService.get<string>('GOOGLE_CLIENT_ID')
 
+    if (!client || !audience) throw new Error('Google OAuth configuration not defined.')
+
     const ticket = await client.verifyIdToken({ idToken: token, audience: audience })
     return ticket.getPayload()
   }
