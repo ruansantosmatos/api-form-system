@@ -20,12 +20,12 @@ export type AuthServiceLogin = {
   data: AuthLoginData
 }
 
-export type AuthServiceSignGoogle = {
+export type AuthServiceGoogle = {
+  code: string
   client: ClientInfoType
-  credential: TokenPayload
 }
 
-export type AuthServiceSignGithub = {
+export type AuthServiceGithub = {
   code: string
   client: ClientInfoType
 }
@@ -33,9 +33,4 @@ export type AuthServiceSignGithub = {
 export type AuthServiceSignUp = {
   client: ClientInfoType
   data: AuthRegisterData
-}
-
-export type AuthServiceSignUpGoogle = {
-  client: ClientInfoType
-  credential: TokenPayload
 }

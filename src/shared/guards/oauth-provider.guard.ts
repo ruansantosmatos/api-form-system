@@ -5,7 +5,7 @@ import { getCookieOptions } from '../utils/getCookieOptions'
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common'
 
 @Injectable()
-export class GithubAuthGuard implements CanActivate {
+export class OAuthProviderRedirectGuard implements CanActivate {
   constructor(private readonly configService: ConfigService) {}
   canActivate(context: ExecutionContext): boolean {
     const CLIENT_URL = this.configService.get<string>('CLIENT_URL')
@@ -19,7 +19,7 @@ export class GithubAuthGuard implements CanActivate {
 
     if (error) {
       response.clearCookie('oauth_state', cookieOptions)
-      return response.redirect(`${CLIENT_URL}?error=oauth_cancelled`)
+      return response.redirect(`${CLIENT_URL}?error=${error}`)
     }
 
     if (!code || !state || !cookieState) {
