@@ -14,6 +14,7 @@ model User {
   email       String       @unique() @db.VarChar(80)
   createdAt   DateTime?    @default(now())
   updatedAt   DateTime?
+  forms       Form[]
   sessions    Session[]
   authMethods AuthMethod[]
 
@@ -49,4 +50,74 @@ model AuthMethod {
 
   @@unique([provider, provider_id])
   @@map("auth_methods")
+}
+
+model Form {
+  id          Int           @id() @default(autoincrement())
+  user_id     Int
+  title       String        @db.VarChar(100)
+  description String        @db.LongText
+  published   Boolean       @default(false)
+  created_at  DateTime?     @default(now())
+  updated_at  DateTime?
+  user        User          @relation(fields: [user_id], references: [id])
+  sections    FormSection[]
+
+  @@map("forms")
+}
+
+model FormSection {
+  id          Int         @id @default(autoincrement())
+  form_id     Int
+  title       String?     @db.VarChar(150)
+  description String?     @db.Text
+  order       Int
+  created_at  DateTime?   @default(now())
+  updated_at  DateTime?
+  form        Form        @relation(fields: [form_id], references: [id])
+  fields      FormField[]
+
+  @@map("form_sections")
+}
+
+model FieldCategory {
+  id          Int         @id @default(autoincrement())
+  name        String      @unique() @db.VarChar(80)
+  description String?     @db.Text
+  created_at  DateTime?   @default(now())
+  updated_at  DateTime?
+  fields      FormField[]
+  filedTypes  FieldType[]
+
+  @@map("field_categories")
+}
+
+model FieldType {
+  id          Int           @id @default(autoincrement())
+  category_id Int
+  name        String        @unique()
+  created_at  DateTime?     @default(now())
+  updated_at  DateTime?
+  category    FieldCategory @relation(fields: [category_id], references: [id])
+  formFields  FormField[]
+
+  @@map("field_types")
+}
+
+model FormField {
+  id          Int       @id @default(autoincrement())
+  section_id  Int
+  category_id Int
+  type_id     Int
+  label       String    @db.VarChar(150)
+  required    Boolean   @default(false)
+  order       Int
+  created_at  DateTime? @default(now())
+  updated_at  DateTime?
+
+  section  FormSection   @relation(fields: [section_id], references: [id])
+  category FieldCategory @relation(fields: [category_id], references: [id])
+  type     FieldType     @relation(fields: [type_id], references: [id])
+
+  @@map("form_fields")
 }

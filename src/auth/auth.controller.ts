@@ -1,6 +1,7 @@
 import type { Response } from 'express'
 import { AuthService } from './auth.service'
 import { ConfigService } from '@nestjs/config'
+import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from '../shared/decorators/zod-body.decorator'
 import { getCookieOptions } from 'src/shared/utils/getCookieOptions'
 import { type ClientInfoType } from 'src/shared/types/client-info.type'
@@ -21,6 +22,7 @@ export class AuthController {
   ) {}
 
   @Post('logout')
+  @UseGuards(JwtAuthGuard)
   logout(@ZodBody(authLogoutSchema) body: AuthLogoutDto) {
     const response = this.authService.logout(body.session_id)
     return response
