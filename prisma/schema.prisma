@@ -106,7 +106,7 @@ model FieldType {
 
 model FormField {
   id          Int       @id @default(autoincrement())
-  section_id  Int
+  section_id  Int?
   category_id Int
   type_id     Int
   label       String    @db.VarChar(150)
@@ -115,7 +115,7 @@ model FormField {
   created_at  DateTime? @default(now())
   updated_at  DateTime?
 
-  section  FormSection   @relation(fields: [section_id], references: [id])
+  section  FormSection?  @relation(fields: [section_id], references: [id])
   category FieldCategory @relation(fields: [category_id], references: [id])
   type     FieldType     @relation(fields: [type_id], references: [id])
 
