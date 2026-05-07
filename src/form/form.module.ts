@@ -4,8 +4,8 @@ import { FormController } from './form.controller'
 import { TokenModule } from 'src/shared/modules/token.module'
 
 @Module({
+  imports: [TokenModule],
   providers: [FormService],
   controllers: [FormController],
-  imports: [TokenModule],
 })
 export class FormModule {}

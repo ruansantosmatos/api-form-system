@@ -62,6 +62,7 @@ model Form {
   updated_at  DateTime?
   user        User          @relation(fields: [user_id], references: [id])
   sections    FormSection[]
+  fields      FormField[]
 
   @@map("forms")
 }
@@ -87,7 +88,7 @@ model FieldCategory {
   created_at  DateTime?   @default(now())
   updated_at  DateTime?
   fields      FormField[]
-  filedTypes  FieldType[]
+  fieldTypes  FieldType[]
 
   @@map("field_categories")
 }
@@ -106,6 +107,7 @@ model FieldType {
 
 model FormField {
   id          Int       @id @default(autoincrement())
+  form_id     Int?
   section_id  Int?
   category_id Int
   type_id     Int
@@ -115,6 +117,7 @@ model FormField {
   created_at  DateTime? @default(now())
   updated_at  DateTime?
 
+  form     Form?         @relation(fields: [form_id], references: [id])
   section  FormSection?  @relation(fields: [section_id], references: [id])
   category FieldCategory @relation(fields: [category_id], references: [id])
   type     FieldType     @relation(fields: [type_id], references: [id])
