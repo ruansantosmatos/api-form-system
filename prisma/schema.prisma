@@ -123,4 +123,18 @@ model FormField {
   type     FieldType     @relation(fields: [type_id], references: [id])
 
   @@map("form_fields")
+  formFieldOptions FormFieldOption[]
 }
+
+model FormFieldOption {
+  id         Int       @id @default(autoincrement())
+  field_id   Int
+  label      String    @db.VarChar(150)
+  value      String    @db.VarChar(150)
+  created_at DateTime? @default(now())
+  updated_at DateTime?
+  field      FormField @relation(fields: [field_id], references: [id])
+
+  @@map("form_field_options")
+}
+

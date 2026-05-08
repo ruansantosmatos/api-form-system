@@ -4,6 +4,8 @@ import type { CreateFormSectionDto } from '../dto/create-form-section.dto'
 import type { UpdateFormSectionItemDto } from '../dto/update-form-section.dto'
 import type { CreateFormSectionFieldDto } from '../dto/create-form-section-field.dto'
 import type { UpdateFormSectionFieldItemDto } from '../dto/update-form-section-field.dto'
+import type { CreateFormFieldOptionDto } from '../dto/create-form-field-option.dto'
+import type { UpdateFormFieldOptionDto } from '../dto/update-form-field-option.dto'
 
 export interface FormServiceCreate {
   data: CreateFormDto
@@ -74,4 +76,28 @@ export interface FormServiceUpdateForm {
   form_id: number
   user_id: number
   data: UpdateFormDto
+}
+
+export interface FormServiceGetFieldOptions {
+  form_id: number
+  field_id: number
+}
+
+export interface FormServiceCreateFieldOption {
+  form_id: number
+  field_id: number
+  data: CreateFormFieldOptionDto
+}
+
+export interface FormServiceUpdateFieldOption {
+  form_id: number
+  field_id: number
+  option_id: number
+  data: UpdateFormFieldOptionDto
+}
+
+export interface FormServiceDeleteFieldOption {
+  form_id: number
+  field_id: number
+  option_id: number
 }

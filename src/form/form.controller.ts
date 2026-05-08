@@ -6,6 +6,8 @@ import { createFormSchema, type CreateFormDto } from './dto/create-form.dto'
 import { updateFormSchema, type UpdateFormDto } from './dto/update-form.dto'
 import { createFormSectionSchema, type CreateFormSectionDto } from './dto/create-form-section.dto'
 import { updateFormSectionsSchema, type UpdateFormSectionsDto } from './dto/update-form-section.dto'
+import { createFormFieldOptionSchema, type CreateFormFieldOptionDto } from './dto/create-form-field-option.dto'
+import { updateFormFieldOptionSchema, type UpdateFormFieldOptionDto } from './dto/update-form-field-option.dto'
 import { createFormSectionFieldSchema, type CreateFormSectionFieldDto } from './dto/create-form-section-field.dto'
 import { updateFormSectionFieldsSchema, type UpdateFormSectionFieldsDto } from './dto/update-form-section-field.dto'
 import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common'
@@ -113,5 +115,43 @@ export class FormController {
     @Param('field_id', ParseIntPipe) field_id: number,
   ) {
     await this.formService.deleteSectionField({ form_id, section_id, field_id })
+  }
+
+  @Get(':form_id/fields/:field_id/options')
+  @UseGuards(JwtAuthGuard)
+  async getFieldOptions(@Param('form_id', ParseIntPipe) form_id: number, @Param('field_id', ParseIntPipe) field_id: number) {
+    return this.formService.getFieldOptions({ form_id, field_id })
+  }
+
+  @Post(':form_id/fields/:field_id/options')
+  @UseGuards(JwtAuthGuard)
+  async createFieldOption(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @Param('field_id', ParseIntPipe) field_id: number,
+    @ZodBody(createFormFieldOptionSchema) body: CreateFormFieldOptionDto,
+  ) {
+    return this.formService.createFieldOption({ form_id, field_id, data: body })
+  }
+
+  @Patch(':form_id/fields/:field_id/options/:option_id')
+  @UseGuards(JwtAuthGuard)
+  async updateFieldOption(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @Param('field_id', ParseIntPipe) field_id: number,
+    @Param('option_id', ParseIntPipe) option_id: number,
+    @ZodBody(updateFormFieldOptionSchema) body: UpdateFormFieldOptionDto,
+  ) {
+    return this.formService.updateFieldOption({ form_id, field_id, option_id, data: body })
+  }
+
+  @Delete(':form_id/fields/:field_id/options/:option_id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  async deleteFieldOption(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @Param('field_id', ParseIntPipe) field_id: number,
+    @Param('option_id', ParseIntPipe) option_id: number,
+  ) {
+    await this.formService.deleteFieldOption({ form_id, field_id, option_id })
   }
 }
