@@ -1,3 +1,8 @@
+export type GithubOAuthRedirectResult = {
+  url: string
+  state: string
+}
+
 export type GithubTokenResponse = {
   scope: string
   access_token: string

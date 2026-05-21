@@ -7,7 +7,16 @@ import { GithubAuthService } from 'src/shared/services/github-auth.service'
 import { GoogleAuthService } from 'src/shared/services/google-auth.service'
 import { PrismaClientService } from '../shared/services/prisma-client.service'
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
-import { AuthServiceLogin, AuthServiceSignUp, AuthServiceGithub, AuthServiceGoogle, AuthRevocationSession } from './interface/auth.interface'
+import { SessionRefreshResult, SessionWithUserResult } from 'src/shared/types/session-service.type'
+import {
+  AuthServiceLogin,
+  AuthServiceSignUp,
+  AuthServiceGithub,
+  AuthServiceGoogle,
+  AuthRevocationSession,
+  AuthOAuthRedirectResult,
+  AuthLogoutResult,
+} from './interface/auth.interface'
 
 @Injectable()
 export class AuthService {
@@ -19,17 +28,17 @@ export class AuthService {
     private readonly githubAuthService: GithubAuthService,
   ) {}
 
-  redirectToGithub() {
+  redirectToGithub(): AuthOAuthRedirectResult {
     const response = this.githubAuthService.buildGithubAuthorizationUrl()
     return response
   }
 
-  redirectToGoogle() {
+  redirectToGoogle(): AuthOAuthRedirectResult {
     const response = this.googleAuthService.buildGoogleAuthorizationUrl()
     return response
   }
 
-  async logout(sessionId: number) {
+  async logout(sessionId: number): Promise<AuthLogoutResult> {
     const now = new Date()
     const reason = REVOCATION.LOGOUT
 
@@ -41,7 +50,7 @@ export class AuthService {
     return { message: 'Logged out successfully.' }
   }
 
-  async login({ client, data }: AuthServiceLogin) {
+  async login({ client, data }: AuthServiceLogin): Promise<SessionWithUserResult> {
     const { email, password } = data
     const user = await this.prisma.user.findUnique({ where: { email } })
 
@@ -58,10 +67,10 @@ export class AuthService {
     if (!isPasswordValid) throw new BadRequestException('Invalid email or password.')
 
     const session = await this.sessionService.create({ user_id: user.id, client })
-    return session
+    return { ...session, user: { id: user.id, name: user.name, email: user.email } }
   }
 
-  async register({ client, data }: AuthServiceSignUp) {
+  async register({ client, data }: AuthServiceSignUp): Promise<SessionWithUserResult> {
     const { name, email, password } = data
     const user = await this.prisma.user.findUnique({ where: { email } })
 
@@ -73,10 +82,10 @@ export class AuthService {
 
     await this.prisma.authMethod.create({ data: { user_id, type: AUTH_METHOD.PASSWORD, password_hash } })
     const session = await this.sessionService.create({ user_id: new_user.id, client })
-    return session
+    return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
   }
 
-  async refresh(sessionId: number, refreshToken: string) {
+  async refresh(sessionId: number, refreshToken: string): Promise<SessionRefreshResult> {
     const now = new Date()
     const reason = REVOCATION.ABSOLUTE_EXPIRATION
 
@@ -102,7 +111,7 @@ export class AuthService {
     return refreshedSession
   }
 
-  async authenticateWithGithub({ code, client }: AuthServiceGithub) {
+  async authenticateWithGithub({ code, client }: AuthServiceGithub): Promise<SessionWithUserResult> {
     const { access_token } = await this.githubAuthService.getAccessToken(code)
     const user_github = await this.githubAuthService.getGithubUser(access_token)
 
@@ -120,29 +129,29 @@ export class AuthService {
 
     const auth_method = await this.prisma.authMethod.findFirst({
       where: { provider_id, provider },
-      include: { user: { select: { id: true } } },
+      include: { user: { select: { id: true, name: true, email: true } } },
     })
 
     if (auth_method) {
-      const user_id = auth_method.user.id
-      const session = await this.sessionService.create({ user_id, client })
-      return session
+      const { id, name, email } = auth_method.user
+      const session = await this.sessionService.create({ user_id: id, client })
+      return { ...session, user: { id, name, email } }
     }
 
     if (user && !auth_method) {
       await this.githubAuthService.bindAuthMethod(user.id, provider_id)
       const session = await this.sessionService.create({ user_id: user.id, client })
-      return session
+      return { ...session, user: { id: user.id, name: user.name, email: user.email } }
     }
 
     const new_user = await this.prisma.user.create({ data: { name: name, email: email } })
     await this.githubAuthService.bindAuthMethod(new_user.id, provider_id)
 
     const session = await this.sessionService.create({ user_id: new_user.id, client })
-    return session
+    return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
   }
 
-  async authenticateWithGoogle({ client, code }: AuthServiceGoogle) {
+  async authenticateWithGoogle({ client, code }: AuthServiceGoogle): Promise<SessionWithUserResult> {
     const { id_token } = await this.googleAuthService.getAccessToken(code)
     const payload = await this.googleAuthService.verifyToken(id_token)
 
@@ -163,21 +172,21 @@ export class AuthService {
     })
 
     if (auth_method) {
-      const user_id = auth_method.user.id
-      const session = await this.sessionService.create({ user_id, client })
-      return session
+      const { id, name, email } = auth_method.user
+      const session = await this.sessionService.create({ user_id: id, client })
+      return { ...session, user: { id, name, email } }
     }
 
     if (user && !auth_method) {
       await this.googleAuthService.bindAuthMethod(user.id, provider_id)
       const session = await this.sessionService.create({ user_id: user.id, client })
-      return session
+      return { ...session, user: { id: user.id, name: user.name, email: user.email } }
     }
 
     const new_user = await this.prisma.user.create({ data: { name: name as string, email: email as string } })
     await this.googleAuthService.bindAuthMethod(new_user.id, provider_id)
 
     const session = await this.sessionService.create({ user_id: new_user.id, client })
-    return session
+    return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
   }
 }

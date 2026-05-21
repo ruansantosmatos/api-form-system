@@ -3,8 +3,15 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AUTH_METHOD } from '../consts/auth-method'
 import { AUTH_PROVIDER } from '../consts/auth-provider'
+import { GITHUB_OAUTH } from '../consts/github-oauth'
 import { PrismaClientService } from './prisma-client.service'
-import { GithubEmailsResponse, GithubRequestBody, GithubTokenResponse, GithubUserResponse } from '../types/github-provider.type'
+import {
+  GithubEmailsResponse,
+  GithubOAuthRedirectResult,
+  GithubRequestBody,
+  GithubTokenResponse,
+  GithubUserResponse,
+} from '../types/github-provider.type'
 
 @Injectable()
 export class GithubAuthService {
@@ -13,7 +20,7 @@ export class GithubAuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async bindAuthMethod(userId: number, providerId: string) {
+  async bindAuthMethod(userId: number, providerId: string): Promise<void> {
     await this.prisma.authMethod.create({
       data: {
         user_id: userId,
@@ -24,7 +31,7 @@ export class GithubAuthService {
     })
   }
 
-  buildGithubAuthorizationUrl() {
+  buildGithubAuthorizationUrl(): GithubOAuthRedirectResult {
     const state = crypto.randomBytes(32).toString('hex')
     const clientId = this.configService.get<string>('GITHUB_CLIENT_ID')
 
@@ -39,13 +46,13 @@ export class GithubAuthService {
       scope: 'read:user user:email',
     })
 
-    const url = `https://github.com/login/oauth/authorize?${params.toString()}`
+    const url = `${GITHUB_OAUTH.AUTH_URL}?${params.toString()}`
     return { url, state }
   }
 
   async getAccessToken(code: string): Promise<GithubTokenResponse> {
     const method = 'POST'
-    const url = 'https://github.com/login/oauth/access_token'
+    const url = GITHUB_OAUTH.TOKEN_URL
 
     const clientId = this.configService.get<string>('GITHUB_CLIENT_ID')
     const clientSecret = this.configService.get<string>('GITHUB_CLIENT_SECRET')
@@ -82,7 +89,7 @@ export class GithubAuthService {
   }
 
   async getGithubUser(access_token: string): Promise<GithubUserResponse> {
-    const url = 'https://api.github.com/user'
+    const url = GITHUB_OAUTH.USER_URL
 
     const headers: HeadersInit = {
       Authorization: `Bearer ${access_token}`,
@@ -102,9 +109,9 @@ export class GithubAuthService {
     return data
   }
 
-  async getGithubEmails(access_token: string) {
+  async getGithubEmails(access_token: string): Promise<GithubEmailsResponse> {
     const headers: HeadersInit = { Authorization: `Bearer ${access_token}`, Accept: 'application/json' }
-    const response = await fetch('https://api.github.com/user/emails', { headers: headers })
+    const response = await fetch(GITHUB_OAUTH.EMAILS_URL, { headers: headers })
 
     if (!response.ok) throw new Error('Failed to fetch GitHub emails')
     return (await response.json()) as GithubEmailsResponse

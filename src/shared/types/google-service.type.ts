@@ -6,3 +6,8 @@ export type GoogleTokenResponse = {
   access_token: string
   refresh_token: string
 }
+
+export type GoogleOAuthRedirectResult = {
+  url: string
+  state: string
+}
