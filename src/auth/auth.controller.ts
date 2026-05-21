@@ -49,31 +49,31 @@ export class AuthController {
   @Post('login')
   async login(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(authLoginSchema) body: AuthLoginDto) {
     const cookieOptions = getCookieOptions()
-    const { access_token, refresh_token } = await this.authService.login({ client, data: body })
+    const { session_id, access_token, refresh_token, user } = await this.authService.login({ client, data: body })
 
     res.cookie('access_token', access_token, cookieOptions)
     res.cookie('refresh_token', refresh_token, cookieOptions)
-    res.sendStatus(204)
+    res.status(200).json({ session: { session_id }, user })
   }
 
   @Post('register')
   async register(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(createRegisterSchema) body: CreateRegisterDto) {
     const cookieOptions = getCookieOptions()
-    const { access_token, refresh_token } = await this.authService.register({ client, data: body })
+    const { session_id, access_token, refresh_token, user } = await this.authService.register({ client, data: body })
 
     res.cookie('access_token', access_token, cookieOptions)
     res.cookie('refresh_token', refresh_token, cookieOptions)
-    res.sendStatus(204)
+    res.status(200).json({ session: { session_id }, user })
   }
 
   @Post('refresh')
   async refresh(@Res() res: Response, @ZodBody(authRefreshSchema) body: AuthRefreshDto) {
     const cookieOptions = getCookieOptions()
-    const { access_token, refresh_token } = await this.authService.refresh(body.session_id, body.refresh_token)
+    const { session_id, access_token, refresh_token } = await this.authService.refresh(body.session_id, body.refresh_token)
 
     res.cookie('access_token', access_token, cookieOptions)
     res.cookie('refresh_token', refresh_token, cookieOptions)
-    res.sendStatus(204)
+    res.status(200).json({ session: { session_id } })
   }
 
   @Get('github/callback')
@@ -81,10 +81,12 @@ export class AuthController {
   async githubCallback(@Res() res: Response, @Query('code') code: string, @ClientInfo() client: ClientInfoType) {
     const cookieOptions = getCookieOptions()
     const clientUrl = this.configService.get<string>('CLIENT_URL')
-    const { access_token, refresh_token } = await this.authService.authenticateWithGithub({ code, client })
+    const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGithub({ code, client })
 
     res.cookie('access_token', access_token, cookieOptions)
     res.cookie('refresh_token', refresh_token, cookieOptions)
+
+    res.cookie('session_info', JSON.stringify({ session_id, user }), getCookieOptions({ httpOnly: false }))
     res.redirect(`${clientUrl}`)
   }
 
@@ -93,10 +95,12 @@ export class AuthController {
   async googleLogin(@Res() res: Response, @Query('code') code: string, @ClientInfo() client: ClientInfoType) {
     const cookieOptions = getCookieOptions()
     const clientUrl = this.configService.get<string>('CLIENT_URL')
+    const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGoogle({ client, code })
 
-    const { access_token, refresh_token } = await this.authService.authenticateWithGoogle({ client, code })
     res.cookie('access_token', access_token, cookieOptions)
     res.cookie('refresh_token', refresh_token, cookieOptions)
+
+    res.cookie('session_info', JSON.stringify({ session_id, user }), getCookieOptions({ httpOnly: false }))
     res.redirect(`${clientUrl}`)
   }
 }

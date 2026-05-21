@@ -1,11 +1,12 @@
 import * as crypto from 'crypto'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { OAuth2Client } from 'google-auth-library'
+import { OAuth2Client, TokenPayload } from 'google-auth-library'
 import { AUTH_METHOD } from '../consts/auth-method'
 import { AUTH_PROVIDER } from '../consts/auth-provider'
+import { GOOGLE_OAUTH } from '../consts/google-oauth'
 import { PrismaClientService } from './prisma-client.service'
-import { GoogleTokenResponse } from '../types/google-service.type'
+import { GoogleOAuthRedirectResult, GoogleTokenResponse } from '../types/google-service.type'
 
 @Injectable()
 export class GoogleAuthService {
@@ -14,7 +15,7 @@ export class GoogleAuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  buildGoogleAuthorizationUrl() {
+  buildGoogleAuthorizationUrl(): GoogleOAuthRedirectResult {
     const state = crypto.randomBytes(32).toString('hex')
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID')
 
@@ -31,13 +32,13 @@ export class GoogleAuthService {
       scope: 'openid email profile',
     })
 
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+    const url = `${GOOGLE_OAUTH.AUTH_URL}?${params.toString()}`
     return { url, state }
   }
 
-  async getAccessToken(code: string) {
+  async getAccessToken(code: string): Promise<GoogleTokenResponse> {
     const method = 'POST'
-    const url = 'https://oauth2.googleapis.com/token'
+    const url = GOOGLE_OAUTH.TOKEN_URL
     const headers: HeadersInit = { 'Content-Type': 'application/x-www-form-urlencoded' }
 
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID')
@@ -67,7 +68,7 @@ export class GoogleAuthService {
     return data
   }
 
-  async verifyToken(token: string) {
+  async verifyToken(token: string): Promise<TokenPayload | undefined> {
     const client = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'))
     const audience = this.configService.get<string>('GOOGLE_CLIENT_ID')
 
@@ -77,7 +78,7 @@ export class GoogleAuthService {
     return ticket.getPayload()
   }
 
-  async bindAuthMethod(userId: number, providerId: string) {
+  async bindAuthMethod(userId: number, providerId: string): Promise<void> {
     await this.prisma.authMethod.create({
       data: {
         user_id: userId,

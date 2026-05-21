@@ -3,7 +3,7 @@ import { TokenService } from './token.service'
 import { SecurityService } from './security.service'
 import { PrismaClientService } from './prisma-client.service'
 import { getAddDayExpiration } from '../utils/getAddDayExpiration'
-import { CreateSessionType } from '../types/session-service.type'
+import { CreateSessionType, SessionCreateResult, SessionRefreshResult } from '../types/session-service.type'
 
 @Injectable()
 export class SessionService {
@@ -13,7 +13,7 @@ export class SessionService {
     private readonly securityService: SecurityService,
   ) {}
 
-  async create({ user_id, client }: CreateSessionType) {
+  async create({ user_id, client }: CreateSessionType): Promise<SessionCreateResult> {
     const expiresAt = getAddDayExpiration(5)
     const absolutelyExpiresAt = getAddDayExpiration(30)
 
@@ -34,7 +34,7 @@ export class SessionService {
     return { session_id: newSession.id, ...tokens }
   }
 
-  async refresh(sessionId: number, userId: number) {
+  async refresh(sessionId: number, userId: number): Promise<SessionRefreshResult> {
     const expiresAt = getAddDayExpiration(5)
     const tokens = await this.tokenService.generateAuthTokens(userId)
 
