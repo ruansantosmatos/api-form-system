@@ -3,6 +3,7 @@ import { ClientInfoType } from './client-info.type'
 export type CreateSessionType = {
   user_id: number
   client: ClientInfoType
+  rememberMe?: boolean
 }
 
 export type SessionUser = {
@@ -18,6 +19,13 @@ export type SessionCreateResult = {
 }
 
 export type SessionWithUserResult = SessionCreateResult & { user: SessionUser }
+
+export type SessionRefreshType = {
+  sessionId: number
+  userId: number
+  rememberMe: boolean
+  absolutelyExpiresAt: Date
+}
 
 export type SessionRefreshResult = {
   session_id: number
