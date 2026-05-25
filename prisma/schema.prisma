@@ -29,6 +29,7 @@ model Session {
   user_agent               String?
   ip_address               String?
   is_valid                 Boolean   @default(true)
+  remember_me              Boolean   @default(false)
   created_at               DateTime? @default(now())
   updated_at               DateTime?
   refresh_token_expires_at DateTime

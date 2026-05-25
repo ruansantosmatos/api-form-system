@@ -1,11 +1,11 @@
 import * as crypto from 'crypto'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { OAuth2Client, TokenPayload } from 'google-auth-library'
 import { AUTH_METHOD } from '../consts/auth-method'
-import { AUTH_PROVIDER } from '../consts/auth-provider'
 import { GOOGLE_OAUTH } from '../consts/google-oauth'
+import { AUTH_PROVIDER } from '../consts/auth-provider'
 import { PrismaClientService } from './prisma-client.service'
+import { OAuth2Client, TokenPayload } from 'google-auth-library'
 import { GoogleOAuthRedirectResult, GoogleTokenResponse } from '../types/google-service.type'
 
 @Injectable()

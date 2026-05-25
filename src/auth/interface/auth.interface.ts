@@ -10,6 +10,7 @@ export type AuthLogoutResult = { message: string }
 export interface AuthLoginData {
   email: string
   password: string
+  remember_me: boolean
 }
 
 export interface AuthRegisterData {
@@ -26,11 +27,13 @@ export type AuthServiceLogin = {
 export type AuthServiceGoogle = {
   code: string
   client: ClientInfoType
+  rememberMe?: boolean
 }
 
 export type AuthServiceGithub = {
   code: string
   client: ClientInfoType
+  rememberMe?: boolean
 }
 
 export type AuthServiceSignUp = {

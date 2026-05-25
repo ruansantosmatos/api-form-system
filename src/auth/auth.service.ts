@@ -51,7 +51,7 @@ export class AuthService {
   }
 
   async login({ client, data }: AuthServiceLogin): Promise<SessionWithUserResult> {
-    const { email, password } = data
+    const { email, password, remember_me } = data
     const user = await this.prisma.user.findUnique({ where: { email } })
 
     if (!user) throw new BadRequestException('Invalid email or password.')
@@ -66,7 +66,7 @@ export class AuthService {
     const isPasswordValid = await this.securityService.compare(password, hash)
     if (!isPasswordValid) throw new BadRequestException('Invalid email or password.')
 
-    const session = await this.sessionService.create({ user_id: user.id, client })
+    const session = await this.sessionService.create({ user_id: user.id, client, rememberMe: remember_me })
     return { ...session, user: { id: user.id, name: user.name, email: user.email } }
   }
 
@@ -87,9 +87,6 @@ export class AuthService {
 
   async refresh(sessionId: number, refreshToken: string): Promise<SessionRefreshResult> {
     const now = new Date()
-    const reason = REVOCATION.ABSOLUTE_EXPIRATION
-
-    const revocation: AuthRevocationSession = { is_valid: false, updated_at: now, revocation_reason: reason }
     const session = await this.prisma.session.findUnique({ where: { id: sessionId } })
 
     if (!session) throw new BadRequestException('Session not found.')
@@ -100,18 +97,42 @@ export class AuthService {
     const isAbsolutelyExpired = session.absolutely_expires_at < now
     const isSessionInvalid = isExpired || isAbsolutelyExpired || !session.is_valid
 
-    if (!isRefreshTokenValid) throw new UnauthorizedException('Invalid refresh token.')
+    if (!isRefreshTokenValid) {
+      if (!isSessionInvalid) {
+        await this.prisma.session.update({
+          where: { id: session.id },
+          data: {
+            is_valid: false,
+            updated_at: now,
+            revocation_reason: REVOCATION.SUSPICIOUS_TOKEN_REUSE,
+          },
+        })
+      }
+      throw new UnauthorizedException('Invalid refresh token.')
+    }
 
     if (isSessionInvalid) {
-      await this.prisma.session.update({ where: { id: session.id }, data: revocation })
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: {
+          is_valid: false,
+          updated_at: now,
+          revocation_reason: REVOCATION.ABSOLUTE_EXPIRATION,
+        },
+      })
       throw new UnauthorizedException('Session expired. Please log in again.')
     }
 
-    const refreshedSession = await this.sessionService.refresh(session.id, session.user_id)
+    const refreshedSession = await this.sessionService.refresh({
+      sessionId: session.id,
+      userId: session.user_id,
+      rememberMe: session.remember_me,
+      absolutelyExpiresAt: session.absolutely_expires_at,
+    })
     return refreshedSession
   }
 
-  async authenticateWithGithub({ code, client }: AuthServiceGithub): Promise<SessionWithUserResult> {
+  async authenticateWithGithub({ code, client, rememberMe }: AuthServiceGithub): Promise<SessionWithUserResult> {
     const { access_token } = await this.githubAuthService.getAccessToken(code)
     const user_github = await this.githubAuthService.getGithubUser(access_token)
 
@@ -134,24 +155,24 @@ export class AuthService {
 
     if (auth_method) {
       const { id, name, email } = auth_method.user
-      const session = await this.sessionService.create({ user_id: id, client })
+      const session = await this.sessionService.create({ user_id: id, client, rememberMe })
       return { ...session, user: { id, name, email } }
     }
 
     if (user && !auth_method) {
       await this.githubAuthService.bindAuthMethod(user.id, provider_id)
-      const session = await this.sessionService.create({ user_id: user.id, client })
+      const session = await this.sessionService.create({ user_id: user.id, client, rememberMe })
       return { ...session, user: { id: user.id, name: user.name, email: user.email } }
     }
 
     const new_user = await this.prisma.user.create({ data: { name: name, email: email } })
     await this.githubAuthService.bindAuthMethod(new_user.id, provider_id)
 
-    const session = await this.sessionService.create({ user_id: new_user.id, client })
+    const session = await this.sessionService.create({ user_id: new_user.id, client, rememberMe })
     return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
   }
 
-  async authenticateWithGoogle({ client, code }: AuthServiceGoogle): Promise<SessionWithUserResult> {
+  async authenticateWithGoogle({ client, code, rememberMe }: AuthServiceGoogle): Promise<SessionWithUserResult> {
     const { id_token } = await this.googleAuthService.getAccessToken(code)
     const payload = await this.googleAuthService.verifyToken(id_token)
 
@@ -173,20 +194,20 @@ export class AuthService {
 
     if (auth_method) {
       const { id, name, email } = auth_method.user
-      const session = await this.sessionService.create({ user_id: id, client })
+      const session = await this.sessionService.create({ user_id: id, client, rememberMe })
       return { ...session, user: { id, name, email } }
     }
 
     if (user && !auth_method) {
       await this.googleAuthService.bindAuthMethod(user.id, provider_id)
-      const session = await this.sessionService.create({ user_id: user.id, client })
+      const session = await this.sessionService.create({ user_id: user.id, client, rememberMe })
       return { ...session, user: { id: user.id, name: user.name, email: user.email } }
     }
 
     const new_user = await this.prisma.user.create({ data: { name: name as string, email: email as string } })
     await this.googleAuthService.bindAuthMethod(new_user.id, provider_id)
 
-    const session = await this.sessionService.create({ user_id: new_user.id, client })
+    const session = await this.sessionService.create({ user_id: new_user.id, client, rememberMe })
     return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
   }
 }
