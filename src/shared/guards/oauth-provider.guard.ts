@@ -17,22 +17,30 @@ export class OAuthProviderRedirectGuard implements CanActivate {
     const cookieOptions = getCookieOptions()
     const cookieState = request.cookies['oauth_state'] as string
 
-    if (error) {
+    const rawErrorRedirect = request.cookies['oauth_error_redirect'] as string | undefined
+    const errorRedirect = rawErrorRedirect?.startsWith('/') ? rawErrorRedirect : '/login'
+
+    const clearOAuthCookies = () => {
       response.clearCookie('oauth_state', cookieOptions)
-      return response.redirect(`${CLIENT_URL}?error=${error}`)
+      response.clearCookie('oauth_error_redirect', cookieOptions)
+    }
+
+    if (error) {
+      clearOAuthCookies()
+      return response.redirect(`${CLIENT_URL}${errorRedirect}?error=${error}`)
     }
 
     if (!code || !state || !cookieState) {
-      response.clearCookie('oauth_state', cookieOptions)
-      return response.redirect(`${CLIENT_URL}?error=oauth_invalid`)
+      clearOAuthCookies()
+      return response.redirect(`${CLIENT_URL}${errorRedirect}?error=oauth_invalid`)
     }
 
     if (state !== cookieState) {
-      response.clearCookie('oauth_state', cookieOptions)
-      return response.redirect(`${CLIENT_URL}?error=oauth_state_invalid`)
+      clearOAuthCookies()
+      return response.redirect(`${CLIENT_URL}${errorRedirect}?error=oauth_state_invalid`)
     }
 
-    response.clearCookie('oauth_state', cookieOptions)
+    clearOAuthCookies()
     return true
   }
 }

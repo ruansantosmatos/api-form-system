@@ -1,0 +1,18 @@
+export const TOKENS_EXPIRES = {
+  ACCESS_TOKEN: 15 * 60 * 1000,
+  REFRESH_TOKEN: {
+    DEFAULT: 7 * 24 * 60 * 60 * 1000,      // 7 days - matches SESSION_EXPIRES_DAYS.ABSOLUTE.DEFAULT
+    REMEMBER_ME: 90 * 24 * 60 * 60 * 1000, // 90 days - matches SESSION_EXPIRES_DAYS.ABSOLUTE.REMEMBER_ME
+  },
+}
+
+export const SESSION_EXPIRES_DAYS = {
+  REFRESH_TOKEN: {
+    DEFAULT: 1,
+    REMEMBER_ME: 30,
+  },
+  ABSOLUTE: {
+    DEFAULT: 7,
+    REMEMBER_ME: 90,
+  },
+}
