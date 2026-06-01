@@ -7,6 +7,11 @@ export type AuthOAuthRedirectResult = { url: string; state: string }
 
 export type AuthLogoutResult = { message: string }
 
+export type AuthServiceLogout = {
+  session_id: number
+  user_id: number
+}
+
 export interface AuthLoginData {
   email: string
   password: string

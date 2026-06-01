@@ -8,6 +8,7 @@ import { getCookieOptions } from 'src/shared/utils/getCookieOptions'
 import { type ClientInfoType } from 'src/shared/types/client-info.type'
 import { ClientInfo } from 'src/shared/decorators/client-info.decorator'
 import { authLoginSchema, type AuthLoginDto } from './dto/auth-login.dto'
+import { CurrentUser } from 'src/shared/decorators/current-user.decorator'
 import { type AuthLogoutDto, authLogoutSchema } from './dto/auth-logout.dto'
 import { type AuthRefreshDto, authRefreshSchema } from './dto/auth-refresh.dto'
 import { OAuthProviderRedirectGuard } from 'src/shared/guards/oauth-provider.guard'
@@ -24,9 +25,8 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  logout(@ZodBody(authLogoutSchema) body: AuthLogoutDto) {
-    const response = this.authService.logout(body.session_id)
-    return response
+  logout(@ZodBody(authLogoutSchema) body: AuthLogoutDto, @CurrentUser() user_id: number) {
+    return this.authService.logout({ session_id: body.session_id, user_id })
   }
 
   @Get('github')
@@ -61,6 +61,9 @@ export class AuthController {
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
+    
+    res.cookie('session_id', session_id, cookieOptions)
+    res.cookie('user', JSON.stringify(user), cookieOptions)
     res.status(200).json({ session: { session_id }, user })
   }
 
@@ -71,6 +74,9 @@ export class AuthController {
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT })
+    
+    res.cookie('session_id', session_id, cookieOptions)
+    res.cookie('user', JSON.stringify(user), cookieOptions)
     res.status(200).json({ session: { session_id }, user })
   }
 
@@ -98,7 +104,8 @@ export class AuthController {
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
-    res.cookie('session_info', JSON.stringify({ session_id, user }), cookieOptions)
+    res.cookie('session_id', session_id, cookieOptions)
+    res.cookie('user', JSON.stringify(user), cookieOptions)
     res.redirect(`${clientUrl}/home`)
   }
 
@@ -116,7 +123,8 @@ export class AuthController {
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
-    res.cookie('session_info', JSON.stringify({ session_id, user }), cookieOptions)
+    res.cookie('session_id', session_id, cookieOptions)
+    res.cookie('user', JSON.stringify(user), cookieOptions)
     res.redirect(`${clientUrl}/home`)
   }
 }
