@@ -6,7 +6,7 @@ import { SecurityService } from '../shared/services/security.service'
 import { GithubAuthService } from 'src/shared/services/github-auth.service'
 import { GoogleAuthService } from 'src/shared/services/google-auth.service'
 import { PrismaClientService } from '../shared/services/prisma-client.service'
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { SessionRefreshResult, SessionWithUserResult } from 'src/shared/types/session-service.type'
 import {
   AuthServiceLogin,
@@ -16,6 +16,7 @@ import {
   AuthRevocationSession,
   AuthOAuthRedirectResult,
   AuthLogoutResult,
+  AuthServiceLogout,
 } from './interface/auth.interface'
 
 @Injectable()
@@ -38,15 +39,18 @@ export class AuthService {
     return response
   }
 
-  async logout(sessionId: number): Promise<AuthLogoutResult> {
+  async logout({ session_id, user_id }: AuthServiceLogout): Promise<AuthLogoutResult> {
     const now = new Date()
     const reason = REVOCATION.LOGOUT
 
     const revocation: AuthRevocationSession = { is_valid: false, updated_at: now, revocation_reason: reason }
-    const session = await this.prisma.session.findUnique({ where: { id: sessionId } })
+    const session = await this.prisma.session.findUnique({ where: { id: session_id, user_id } })
 
     if (!session) throw new BadRequestException('Session not found.')
-    await this.prisma.session.update({ where: { id: sessionId }, data: revocation })
+      
+    if (session.user_id !== user_id) throw new ForbiddenException('Access denied.')
+
+    await this.prisma.session.update({ where: { id: session_id, user_id }, data: revocation })
     return { message: 'Logged out successfully.' }
   }
 
