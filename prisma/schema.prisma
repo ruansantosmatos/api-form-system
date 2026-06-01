@@ -59,9 +59,10 @@ model Form {
   user_id     Int
   title       String        @db.VarChar(100)
   description String        @db.LongText
-  published   Boolean       @default(false)
-  created_at  DateTime?     @default(now())
-  updated_at  DateTime?
+  published      Boolean       @default(false)
+  created_at     DateTime?     @default(now())
+  updated_at     DateTime?
+  last_opened_at DateTime?
   user        User            @relation(fields: [user_id], references: [id])
   sections    FormSection[]
   fields      FormField[]
