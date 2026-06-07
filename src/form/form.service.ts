@@ -91,10 +91,32 @@ export class FormService {
 
     if (form.user_id !== user_id) throw new ForbiddenException('Form not access')
 
-    await this.prisma.$transaction([
-      this.prisma.formField.deleteMany({ where: { form_id } }),
-      this.prisma.formSection.deleteMany({ where: { form_id } }),
-      this.prisma.form.delete({ where: { id: form_id } }),
-    ])
+    await this.prisma.$transaction(async (tx) => {
+      const submissions = await tx.formSubmission.findMany({
+        where: { form_id },
+        select: { id: true },
+      })
+      const submissionIds = submissions.map((s) => s.id)
+
+      const fields = await tx.formField.findMany({
+        where: { form_id },
+        select: { id: true },
+      })
+      const fieldIds = fields.map((f) => f.id)
+
+      const answers = await tx.formSubmissionAnswer.findMany({
+        where: { submission_id: { in: submissionIds } },
+        select: { id: true },
+      })
+      const answerIds = answers.map((a) => a.id)
+
+      await tx.formSubmissionAnswerOption.deleteMany({ where: { answer_id: { in: answerIds } } })
+      await tx.formSubmissionAnswer.deleteMany({ where: { submission_id: { in: submissionIds } } })
+      await tx.formSubmission.deleteMany({ where: { form_id } })
+      await tx.formFieldOption.deleteMany({ where: { field_id: { in: fieldIds } } })
+      await tx.formField.deleteMany({ where: { form_id } })
+      await tx.formSection.deleteMany({ where: { form_id } })
+      await tx.form.delete({ where: { id: form_id } })
+    })
   }
 }
