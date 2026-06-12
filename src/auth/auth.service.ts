@@ -47,7 +47,7 @@ export class AuthService {
     const session = await this.prisma.session.findUnique({ where: { id: session_id, user_id } })
 
     if (!session) throw new BadRequestException('Session not found.')
-      
+
     if (session.user_id !== user_id) throw new ForbiddenException('Access denied.')
 
     await this.prisma.session.update({ where: { id: session_id, user_id }, data: revocation })

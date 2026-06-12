@@ -8,6 +8,7 @@ import type {
   FieldServiceCreateFieldOption,
   FieldServiceUpdateFieldOption,
   FieldServiceDeleteFieldOption,
+  FieldCategoryWithTypes,
 } from './interface/field.interface'
 
 @Injectable()
@@ -37,6 +38,16 @@ export class FieldService {
 
     if (category_id !== undefined && fieldType && fieldType.category_id !== category_id)
       throw new UnprocessableEntityException('Field type does not belong to category')
+  }
+
+  async getFieldCategories(): Promise<FieldCategoryWithTypes[]> {
+    return this.prisma.fieldCategory.findMany({
+      select: {
+        id: true,
+        name: true,
+        fieldTypes: { select: { id: true, name: true } },
+      },
+    })
   }
 
   async createFormField({ form_id, data }: FieldServiceCreateFormField) {

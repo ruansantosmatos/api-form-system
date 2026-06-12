@@ -11,6 +11,12 @@ import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Pat
 export class FieldController {
   constructor(private readonly fieldService: FieldService) {}
 
+  @Get('fields/categories/types')
+  @UseGuards(JwtAuthGuard)
+  async getFieldCategories() {
+    return this.fieldService.getFieldCategories()
+  }
+
   @Post(':form_id/fields')
   @UseGuards(JwtAuthGuard)
   async createFormField(@Param('form_id', ParseIntPipe) form_id: number, @ZodBody(createFieldSchema) body: CreateFieldDto) {

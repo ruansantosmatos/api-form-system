@@ -1,4 +1,13 @@
+import { Prisma } from 'src/generated/prisma/client'
 import type { CreateFieldDto } from '../dto/create-field.dto'
+
+export type FieldCategoryWithTypes = Prisma.FieldCategoryGetPayload<{
+  select: {
+    id: true
+    name: true
+    fieldTypes: { select: { id: true; name: true } }
+  }
+}>
 import type { UpdateFieldItemDto } from '../dto/update-field.dto'
 import type { CreateFieldOptionDto } from '../dto/create-field-option.dto'
 import type { UpdateFieldOptionDto } from '../dto/update-field-option.dto'

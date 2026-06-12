@@ -1,4 +1,4 @@
-import { Form, Prisma } from 'src/generated/prisma/client'
+import { Form } from 'src/generated/prisma/client'
 import type { CreateFormDto } from '../dto/create-form.dto'
 import type { UpdateFormDto } from '../dto/update-form.dto'
 
@@ -28,15 +28,7 @@ export interface FormServiceDeleteForm {
   user_id: number
 }
 
-export type FormSummary = Pick<Form, 
-  | 'id' 
-  | 'title' 
-  | 'description' 
-  | 'published' 
-  | 'created_at' 
-  | 'updated_at' 
-  | 'last_opened_at'
->
+export type FormSummary = Pick<Form, 'id' | 'title' | 'description' | 'published' | 'created_at' | 'updated_at' | 'last_opened_at'>
 
 export type FormPaginatedResult = {
   data: FormSummary[]
@@ -47,24 +39,3 @@ export type FormPaginatedResult = {
     total_pages: number
   }
 }
-
-export type FormWithRelations = Prisma.FormGetPayload<{
-  include: {
-    fields: {
-      include: {
-        category: { select: { id: true; name: true } }
-        type: { select: { id: true; name: true } }
-      }
-    }
-    sections: {
-      include: {
-        fields: {
-          include: {
-            category: { select: { id: true; name: true } }
-            type: { select: { id: true; name: true } }
-          }
-        }
-      }
-    }
-  }
-}>
