@@ -1,6 +1,8 @@
+import { FormField } from 'src/generated/prisma/client'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import type {
+  FieldServiceGetFormFields,
   FieldServiceCreateFormField,
   FieldServiceUpdateFormFields,
   FieldServiceDeleteFormField,
@@ -50,6 +52,12 @@ export class FieldService {
     })
   }
 
+  async getFormFields({ form_id }: FieldServiceGetFormFields): Promise<FormField[]> {
+    const form = await this.prisma.form.findUnique({ where: { id: form_id } })
+    if (!form) throw new NotFoundException('Form not found')
+    return this.prisma.formField.findMany({ where: { form_id }, orderBy: { order: 'asc' } })
+  }
+
   async createFormField({ form_id, data }: FieldServiceCreateFormField) {
     const form = await this.prisma.form.findUnique({ where: { id: form_id } })
     if (!form) throw new NotFoundException('Form not found')
@@ -65,16 +73,32 @@ export class FieldService {
     })
   }
 
-  async updateFormFields({ form_id, fields }: FieldServiceUpdateFormFields) {
+  async updateFormFields({ form_id, fields }: FieldServiceUpdateFormFields): Promise<FormField[]> {
+    const updated_at = new Date()
     const form = await this.prisma.form.findUnique({ where: { id: form_id } })
     if (!form) throw new NotFoundException('Form not found')
 
     await Promise.all(fields.map(({ category_id, type_id }) => this.validateFieldRelations(category_id, type_id)))
 
-    const updated_at = new Date()
-    return this.prisma.$transaction(
-      fields.map(({ id, ...data }) => this.prisma.formField.update({ where: { id, form_id }, data: { ...data, updated_at } })),
-    )
+    const currentFields = await this.prisma.formField.findMany({
+      where: { id: { in: fields.map(f => f.id) }, form_id },
+      select: { id: true, category_id: true },
+    })
+
+    return this.prisma.$transaction(async tx => {
+      for (const current of currentFields) {
+        const incoming = fields.find(f => f.id === current.id)
+        if (incoming?.category_id !== undefined && incoming.category_id !== current.category_id) {
+          const answers = await tx.formSubmissionAnswer.findMany({ where: { field_id: current.id }, select: { id: true } })
+          const answerIds = answers.map(a => a.id)
+
+          await tx.formSubmissionAnswerOption.deleteMany({ where: { answer_id: { in: answerIds } } })
+          await tx.formFieldOption.deleteMany({ where: { field_id: current.id } })
+        }
+      }
+
+      return Promise.all(fields.map(({ id, ...data }) => tx.formField.update({ where: { id, form_id }, data: { ...data, updated_at } })))
+    })
   }
 
   async deleteFormField({ form_id, field_id }: FieldServiceDeleteFormField) {
