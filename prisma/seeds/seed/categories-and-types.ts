@@ -1,8 +1,9 @@
 import { prismaClient } from '../config/prisma-client'
 
 const categoryTypes: Record<string, string[]> = {
-  Texto: ['Campo Simples', 'Campo Longo', 'Senha', 'Email', 'Telefone', 'Número', 'URL'],
-  Seleção: ['Caixa de Seleção', 'Botão de Opção', 'Lista Suspensa', 'Seleção Múltipla', 'Alternância'],
+  Texto: ['Campo Simples', 'Campo Longo'],
+  Seleção: ['Multipla Escolha', 'Caixa de Seleção'],
+  'Data/Horário': ['Data', 'Hora', 'Data e Hora'],
 }
 
 export async function categoriesAndTypes() {

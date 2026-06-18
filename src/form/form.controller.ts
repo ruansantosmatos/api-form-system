@@ -3,8 +3,8 @@ import { Form } from 'src/generated/prisma/client'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
 import { ZodQuery } from 'src/shared/decorators/zod-query.decorator'
+import { type FormPaginatedResult } from './interface/form.interface'
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator'
-import { type FormPaginatedResult, type FormWithRelations } from './interface/form.interface'
 import { createFormSchema, type CreateFormDto } from './dto/create-form.dto'
 import { updateFormSchema, type UpdateFormDto } from './dto/update-form.dto'
 import { getAllFormsSchema, type GetAllFormsDto } from './dto/get-all-forms.dto'
@@ -28,13 +28,17 @@ export class FormController {
 
   @Get(':form_id')
   @UseGuards(JwtAuthGuard)
-  async getForm(@Param('form_id', ParseIntPipe) form_id: number): Promise<FormWithRelations> {
+  async getForm(@Param('form_id', ParseIntPipe) form_id: number): Promise<Form> {
     return this.formService.getForm({ form_id })
   }
 
   @Patch(':form_id')
   @UseGuards(JwtAuthGuard)
-  async updateForm(@Param('form_id', ParseIntPipe) form_id: number, @CurrentUser() user_id: number, @ZodBody(updateFormSchema) body: UpdateFormDto): Promise<Form> {
+  async updateForm(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @CurrentUser() user_id: number,
+    @ZodBody(updateFormSchema) body: UpdateFormDto,
+  ): Promise<Form> {
     return this.formService.updateForm({ form_id, user_id, data: body })
   }
 
