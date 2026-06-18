@@ -64,8 +64,13 @@ export class FieldService {
 
     await this.validateFieldRelations(data.category_id, data.type_id)
 
+    const latestSection = await this.prisma.formSection.findFirst({
+      where: { form_id },
+      orderBy: { id: 'desc' },
+    })
+
     return this.prisma.formField.create({
-      data: { ...data, form_id },
+      data: { ...data, ...(latestSection ? { section_id: latestSection.id } : { form_id }) },
       include: {
         category: { select: { id: true, name: true } },
         type: { select: { id: true, name: true } },
@@ -101,11 +106,19 @@ export class FieldService {
     })
   }
 
-  async deleteFormField({ form_id, field_id }: FieldServiceDeleteFormField) {
+  async deleteFormField({ form_id, field_id }: FieldServiceDeleteFormField): Promise<void> {
     const field = await this.prisma.formField.findUnique({ where: { id: field_id, form_id } })
     if (!field) throw new NotFoundException('Field not found')
 
-    await this.prisma.formField.delete({ where: { id: field_id } })
+    await this.prisma.$transaction(async (tx) => {
+      const answers = await tx.formSubmissionAnswer.findMany({ where: { field_id }, select: { id: true } })
+      const answerIds = answers.map((a) => a.id)
+
+      await tx.formSubmissionAnswerOption.deleteMany({ where: { answer_id: { in: answerIds } } })
+      await tx.formSubmissionAnswer.deleteMany({ where: { field_id } })
+      await tx.formFieldOption.deleteMany({ where: { field_id } })
+      await tx.formField.delete({ where: { id: field_id } })
+    })
   }
 
   async getFieldOptions({ form_id, field_id }: FieldServiceGetFieldOptions) {

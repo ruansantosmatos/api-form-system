@@ -57,7 +57,17 @@ export class SectionService {
   async createSection({ form_id, data }: SectionServiceCreateSection): Promise<FormSection> {
     const orderInUse = await this.prisma.formSection.findFirst({ where: { form_id, order: data.order } })
     if (orderInUse) throw new ConflictException('A section with this order already exists in the form')
-    return this.prisma.formSection.create({ data: { ...data, form_id } })
+
+    return this.prisma.$transaction(async (tx) => {
+      const section = await tx.formSection.create({ data: { ...data, form_id } })
+
+      await tx.formField.updateMany({
+        where: { form_id, section_id: null },
+        data: { section_id: section.id, form_id: null },
+      })
+
+      return section
+    })
   }
 
   async updateSections({ form_id, sections }: SectionServiceUpdateSections): Promise<FormSection[]> {
