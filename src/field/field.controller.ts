@@ -1,3 +1,4 @@
+import { FormField } from 'src/generated/prisma/client'
 import { FieldService } from './field.service'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
@@ -10,6 +11,18 @@ import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Pat
 @Controller('forms')
 export class FieldController {
   constructor(private readonly fieldService: FieldService) {}
+
+  @Get('fields/categories/types')
+  @UseGuards(JwtAuthGuard)
+  async getFieldCategories() {
+    return this.fieldService.getFieldCategories()
+  }
+
+  @Get(':form_id/fields')
+  @UseGuards(JwtAuthGuard)
+  async getFormFields(@Param('form_id', ParseIntPipe) form_id: number): Promise<FormField[]> {
+    return this.fieldService.getFormFields({ form_id })
+  }
 
   @Post(':form_id/fields')
   @UseGuards(JwtAuthGuard)

@@ -61,7 +61,7 @@ export class AuthController {
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
-    
+
     res.cookie('session_id', session_id, cookieOptions)
     res.cookie('user', JSON.stringify(user), cookieOptions)
     res.status(200).json({ session: { session_id }, user })
@@ -74,7 +74,7 @@ export class AuthController {
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT })
-    
+
     res.cookie('session_id', session_id, cookieOptions)
     res.cookie('user', JSON.stringify(user), cookieOptions)
     res.status(200).json({ session: { session_id }, user })

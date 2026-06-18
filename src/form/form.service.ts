@@ -1,7 +1,14 @@
 import { Form } from 'src/generated/prisma/client'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
-import type { FormServiceCreate, FormServiceGetAll, FormServiceGetForm, FormServiceUpdateForm, FormServiceDeleteForm, FormPaginatedResult, FormWithRelations } from './interface/form.interface'
+import type {
+  FormServiceCreate,
+  FormServiceGetAll,
+  FormServiceGetForm,
+  FormServiceUpdateForm,
+  FormServiceDeleteForm,
+  FormPaginatedResult,
+} from './interface/form.interface'
 
 @Injectable()
 export class FormService {
@@ -16,14 +23,14 @@ export class FormService {
         take: limit,
         where: { user_id },
         orderBy: { title: sort },
-        select: { 
-          id: true, 
-          title: true, 
-          published: true, 
-          created_at: true, 
-          updated_at: true, 
-          description: true, 
-          last_opened_at: true 
+        select: {
+          id: true,
+          title: true,
+          published: true,
+          created_at: true,
+          updated_at: true,
+          description: true,
+          last_opened_at: true,
         },
       }),
       this.prisma.form.count({ where: { user_id } }),
@@ -44,32 +51,11 @@ export class FormService {
     return this.prisma.form.create({ data })
   }
 
-  async getForm({ form_id }: FormServiceGetForm): Promise<FormWithRelations> {
-    const fieldInclude = {
-      category: { select: { id: true, name: true } },
-      type: { select: { id: true, name: true } },
-    }
-
+  async getForm({ form_id }: FormServiceGetForm): Promise<Form> {
     try {
       return await this.prisma.form.update({
         where: { id: form_id },
         data: { last_opened_at: new Date() },
-        include: {
-          fields: {
-            where: { section_id: null },
-            orderBy: { order: 'asc' },
-            include: fieldInclude,
-          },
-          sections: {
-            orderBy: { order: 'asc' },
-            include: {
-              fields: {
-                orderBy: { order: 'asc' },
-                include: fieldInclude,
-              },
-            },
-          },
-        },
       })
     } catch {
       throw new NotFoundException('Form not found')
@@ -91,24 +77,24 @@ export class FormService {
 
     if (form.user_id !== user_id) throw new ForbiddenException('Form not access')
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async tx => {
       const submissions = await tx.formSubmission.findMany({
         where: { form_id },
         select: { id: true },
       })
-      const submissionIds = submissions.map((s) => s.id)
+      const submissionIds = submissions.map(s => s.id)
 
       const fields = await tx.formField.findMany({
         where: { form_id },
         select: { id: true },
       })
-      const fieldIds = fields.map((f) => f.id)
+      const fieldIds = fields.map(f => f.id)
 
       const answers = await tx.formSubmissionAnswer.findMany({
         where: { submission_id: { in: submissionIds } },
         select: { id: true },
       })
-      const answerIds = answers.map((a) => a.id)
+      const answerIds = answers.map(a => a.id)
 
       await tx.formSubmissionAnswerOption.deleteMany({ where: { answer_id: { in: answerIds } } })
       await tx.formSubmissionAnswer.deleteMany({ where: { submission_id: { in: submissionIds } } })
