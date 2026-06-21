@@ -7,6 +7,8 @@ import type {
   FormServiceGetForm,
   FormServiceUpdateForm,
   FormServiceDeleteForm,
+  FormServiceToggleFavorite,
+  FormFavoriteResult,
   FormPaginatedResult,
 } from './interface/form.interface'
 
@@ -14,26 +16,28 @@ import type {
 export class FormService {
   constructor(private readonly prisma: PrismaClientService) {}
 
-  async getAll({ user_id, page, limit, sort }: FormServiceGetAll): Promise<FormPaginatedResult> {
+  async getAll({ user_id, page, limit, sort, favorite }: FormServiceGetAll): Promise<FormPaginatedResult> {
     const skip = (page - 1) * limit
+    const where = { user_id, ...(favorite !== undefined && { is_favorite: favorite }) }
 
     const [forms, total] = await this.prisma.$transaction([
       this.prisma.form.findMany({
         skip,
         take: limit,
-        where: { user_id },
+        where,
         orderBy: { title: sort },
         select: {
           id: true,
           title: true,
           published: true,
+          is_favorite: true,
           created_at: true,
           updated_at: true,
           description: true,
           last_opened_at: true,
         },
       }),
-      this.prisma.form.count({ where: { user_id } }),
+      this.prisma.form.count({ where }),
     ])
 
     return {
@@ -45,6 +49,18 @@ export class FormService {
         total_pages: Math.ceil(total / limit),
       },
     }
+  }
+
+  async toggleFavorite({ form_id, user_id }: FormServiceToggleFavorite): Promise<FormFavoriteResult> {
+    const form = await this.prisma.form.findUnique({ where: { id: form_id } })
+    if (!form) throw new NotFoundException('Form not found')
+    if (form.user_id !== user_id) throw new ForbiddenException('Form not access')
+
+    return this.prisma.form.update({
+      where: { id: form_id },
+      data: { is_favorite: !form.is_favorite },
+      select: { id: true, is_favorite: true },
+    })
   }
 
   async create({ data }: FormServiceCreate): Promise<Form> {

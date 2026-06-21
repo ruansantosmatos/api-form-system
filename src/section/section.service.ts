@@ -1,4 +1,4 @@
-import { FormField, FormFieldOption, FormSection } from 'src/generated/prisma/client'
+import { FormField, FormFieldOption, FormSection, Prisma } from 'src/generated/prisma/client'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import type {
@@ -14,6 +14,8 @@ import type {
   SectionServiceUpdateSectionFieldOption,
   SectionServiceDeleteSectionFieldOption,
   SectionServiceCreateSectionFieldOption,
+  SectionServiceCloneSection,
+  SectionServiceCloneSectionField,
   SectionWithFields,
   SectionFieldWithRelations,
 } from './interface/section.interface'
@@ -21,6 +23,14 @@ import type {
 @Injectable()
 export class SectionService {
   constructor(private readonly prisma: PrismaClientService) {}
+
+  private async cloneOptionsForField(tx: Prisma.TransactionClient, options: FormFieldOption[], field_id: number): Promise<void> {
+    if (options.length === 0) return
+
+    await tx.formFieldOption.createMany({
+      data: options.map(({ id: _id, field_id: _fid, created_at: _ca, updated_at: _ua, ...opt }) => ({ ...opt, field_id })),
+    })
+  }
 
   private async validateFieldRelations(category_id?: number, type_id?: number) {
     if (category_id === undefined && type_id === undefined) return
@@ -58,7 +68,7 @@ export class SectionService {
     const orderInUse = await this.prisma.formSection.findFirst({ where: { form_id, order: data.order } })
     if (orderInUse) throw new ConflictException('A section with this order already exists in the form')
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async tx => {
       const section = await tx.formSection.create({ data: { ...data, form_id } })
 
       await tx.formField.updateMany({
@@ -206,6 +216,62 @@ export class SectionService {
     if (!option) throw new NotFoundException('Option not found')
 
     await this.prisma.formFieldOption.delete({ where: { id: option_id } })
+  }
+
+  async cloneSection({ form_id, section_id }: SectionServiceCloneSection): Promise<SectionWithFields> {
+    const source = await this.prisma.formSection.findUnique({
+      where: { id: section_id, form_id },
+      include: { fields: { orderBy: { order: 'asc' }, include: { options: true } } },
+    })
+    if (!source) throw new NotFoundException('Section not found')
+
+    const nextOrder = source.order + 1
+
+    return this.prisma.$transaction(async tx => {
+      await tx.formSection.updateMany({
+        where: { form_id, order: { gte: nextOrder } },
+        data: { order: { increment: 1 } },
+      })
+
+      const cloned = await tx.formSection.create({
+        data: { form_id, order: nextOrder, title: source.title, description: source.description },
+      })
+
+      for (const { id: _id, section_id: _sid, form_id: _fid, created_at: _ca, updated_at: _ua, options, ...fieldData } of source.fields) {
+        const clonedField = await tx.formField.create({ data: { ...fieldData, section_id: cloned.id } })
+        await this.cloneOptionsForField(tx, options, clonedField.id)
+      }
+
+      return tx.formSection.findUniqueOrThrow({
+        where: { id: cloned.id },
+        include: { fields: { orderBy: { order: 'asc' } } },
+      })
+    })
+  }
+
+  async cloneSectionField({ form_id, section_id, field_id }: SectionServiceCloneSectionField): Promise<FormField> {
+    const section = await this.prisma.formSection.findUnique({ where: { id: section_id, form_id } })
+    if (!section) throw new NotFoundException('Section not found')
+
+    const source = await this.prisma.formField.findUnique({
+      where: { id: field_id, section_id },
+      include: { options: true },
+    })
+    if (!source) throw new NotFoundException('Field not found')
+
+    const nextOrder = source.order + 1
+
+    return this.prisma.$transaction(async tx => {
+      await tx.formField.updateMany({
+        where: { section_id, order: { gte: nextOrder } },
+        data: { order: { increment: 1 } },
+      })
+
+      const { id: _id, section_id: _sid, form_id: _fid, created_at: _ca, updated_at: _ua, options, ...fieldData } = source
+      const cloned = await tx.formField.create({ data: { ...fieldData, section_id, order: nextOrder } })
+      await this.cloneOptionsForField(tx, options, cloned.id)
+      return cloned
+    })
   }
 
   async createSectionFieldOption({ form_id, section_id, field_id, data }: SectionServiceCreateSectionFieldOption): Promise<FormFieldOption> {

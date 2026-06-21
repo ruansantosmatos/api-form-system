@@ -3,11 +3,11 @@ import { Form } from 'src/generated/prisma/client'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
 import { ZodQuery } from 'src/shared/decorators/zod-query.decorator'
-import { type FormPaginatedResult } from './interface/form.interface'
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator'
 import { createFormSchema, type CreateFormDto } from './dto/create-form.dto'
 import { updateFormSchema, type UpdateFormDto } from './dto/update-form.dto'
 import { getAllFormsSchema, type GetAllFormsDto } from './dto/get-all-forms.dto'
+import { type FormPaginatedResult, type FormFavoriteResult } from './interface/form.interface'
 import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common'
 
 @Controller('forms')
@@ -40,6 +40,12 @@ export class FormController {
     @ZodBody(updateFormSchema) body: UpdateFormDto,
   ): Promise<Form> {
     return this.formService.updateForm({ form_id, user_id, data: body })
+  }
+
+  @Patch(':form_id/favorite')
+  @UseGuards(JwtAuthGuard)
+  async toggleFavorite(@Param('form_id', ParseIntPipe) form_id: number, @CurrentUser() user_id: number): Promise<FormFavoriteResult> {
+    return this.formService.toggleFavorite({ form_id, user_id })
   }
 
   @Delete(':form_id')

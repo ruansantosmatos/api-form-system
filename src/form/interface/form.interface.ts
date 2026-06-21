@@ -11,6 +11,7 @@ export interface FormServiceGetAll {
   page: number
   limit: number
   sort: 'asc' | 'desc'
+  favorite?: boolean
 }
 
 export interface FormServiceGetForm {
@@ -28,7 +29,14 @@ export interface FormServiceDeleteForm {
   user_id: number
 }
 
-export type FormSummary = Pick<Form, 'id' | 'title' | 'description' | 'published' | 'created_at' | 'updated_at' | 'last_opened_at'>
+export interface FormServiceToggleFavorite {
+  form_id: number
+  user_id: number
+}
+
+export type FormFavoriteResult = Pick<Form, 'id' | 'is_favorite'>
+
+export type FormSummary = Pick<Form, 'id' | 'title' | 'description' | 'published' | 'is_favorite' | 'created_at' | 'updated_at' | 'last_opened_at'>
 
 export type FormPaginatedResult = {
   data: FormSummary[]

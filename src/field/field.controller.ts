@@ -36,6 +36,12 @@ export class FieldController {
     return this.fieldService.updateFormFields({ form_id, fields: body.fields })
   }
 
+  @Post(':form_id/fields/:field_id/clone')
+  @UseGuards(JwtAuthGuard)
+  async cloneFormField(@Param('form_id', ParseIntPipe) form_id: number, @Param('field_id', ParseIntPipe) field_id: number): Promise<FormField> {
+    return this.fieldService.cloneFormField({ form_id, field_id })
+  }
+
   @Delete(':form_id/fields/:field_id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard)
