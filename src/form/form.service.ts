@@ -118,6 +118,7 @@ export class FormService {
       await tx.formFieldOption.deleteMany({ where: { field_id: { in: fieldIds } } })
       await tx.formField.deleteMany({ where: { form_id } })
       await tx.formSection.deleteMany({ where: { form_id } })
+      await tx.formPublication.deleteMany({ where: { form_id } })
       await tx.form.delete({ where: { id: form_id } })
     })
   }

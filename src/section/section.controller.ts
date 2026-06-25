@@ -136,6 +136,16 @@ export class SectionController {
     await this.sectionService.deleteSectionFieldOption({ form_id, section_id, field_id, option_id })
   }
 
+  @Post(':form_id/sections/:source_id/merge/:target_id')
+  @UseGuards(JwtAuthGuard)
+  async mergeSections(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @Param('source_id', ParseIntPipe) source_id: number,
+    @Param('target_id', ParseIntPipe) target_id: number,
+  ): Promise<SectionWithFields> {
+    return this.sectionService.mergeSections({ form_id, source_id, target_id })
+  }
+
   @Post(':form_id/sections/:section_id/fields/:field_id/options')
   @UseGuards(JwtAuthGuard)
   async createSectionFieldOption(

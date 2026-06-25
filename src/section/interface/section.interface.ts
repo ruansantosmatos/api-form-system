@@ -99,3 +99,9 @@ export interface SectionServiceCloneSectionField {
   section_id: number
   field_id: number
 }
+
+export interface SectionServiceMergeSections {
+  form_id: number
+  source_id: number
+  target_id: number
+}

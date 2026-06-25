@@ -68,8 +68,32 @@ model Form {
   sections    FormSection[]
   fields      FormField[]
   submissions FormSubmission[]
+  publication FormPublication?
+  config      FormPublicationConfig?
 
   @@map("forms")
+}
+
+model FormPublication {
+  id           Int      @id @default(autoincrement())
+  form_id      Int      @unique
+  hash         String   @unique @db.VarChar(64)
+  published_at DateTime @default(now())
+  is_active    Boolean  @default(true)
+  form         Form     @relation(fields: [form_id], references: [id])
+
+  @@map("form_publications")
+}
+
+model FormPublicationConfig {
+  id              Int      @id @default(autoincrement())
+  form_id         Int      @unique
+  expires_at      DateTime?
+  max_responses   Int?
+  allow_anonymous Boolean  @default(false)
+  form            Form     @relation(fields: [form_id], references: [id], onDelete: Cascade)
+
+  @@map("form_publication_configs")
 }
 
 model FormSection {

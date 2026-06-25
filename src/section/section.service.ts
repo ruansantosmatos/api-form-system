@@ -16,6 +16,7 @@ import type {
   SectionServiceCreateSectionFieldOption,
   SectionServiceCloneSection,
   SectionServiceCloneSectionField,
+  SectionServiceMergeSections,
   SectionWithFields,
   SectionFieldWithRelations,
 } from './interface/section.interface'
@@ -271,6 +272,48 @@ export class SectionService {
       const cloned = await tx.formField.create({ data: { ...fieldData, section_id, order: nextOrder } })
       await this.cloneOptionsForField(tx, options, cloned.id)
       return cloned
+    })
+  }
+
+  async mergeSections({ form_id, source_id, target_id }: SectionServiceMergeSections): Promise<SectionWithFields> {
+    if (source_id === target_id) throw new UnprocessableEntityException('Source and target sections must be different')
+
+    const [source, target] = await Promise.all([
+      this.prisma.formSection.findUnique({ where: { id: source_id, form_id } }),
+      this.prisma.formSection.findUnique({ where: { id: target_id, form_id } }),
+    ])
+
+    if (!source) throw new NotFoundException('Source section not found')
+
+    if (!target) throw new NotFoundException('Target section not found')
+
+    const sourceFields = await this.prisma.formField.findMany({
+      where: { section_id: source_id },
+      orderBy: { order: 'asc' },
+      select: { id: true },
+    })
+
+    const { _max } = await this.prisma.formField.aggregate({
+      where: { section_id: target_id },
+      _max: { order: true },
+    })
+    const baseOrder = _max.order ?? 0
+
+    return this.prisma.$transaction(async tx => {
+      const updated_at = new Date()
+      for (let i = 0; i < sourceFields.length; i++) {
+        await tx.formField.update({
+          where: { id: sourceFields[i].id },
+          data: { section_id: target_id, order: baseOrder + i + 1, updated_at },
+        })
+      }
+
+      await tx.formSection.delete({ where: { id: source_id } })
+
+      return tx.formSection.findUniqueOrThrow({
+        where: { id: target_id },
+        include: { fields: { orderBy: { order: 'asc' } } },
+      })
     })
   }
 
