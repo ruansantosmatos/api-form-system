@@ -8,26 +8,28 @@ const publicFormSelect = {
         id: true,
         title: true,
         description: true,
-        sections: {
-          orderBy: { order: 'asc' as const },
-          include: {
-            fields: {
-              orderBy: { order: 'asc' as const },
-              include: { options: true },
-            },
-          },
-        },
-        fields: {
-          where: { section_id: null },
-          orderBy: { order: 'asc' as const },
-          include: { options: true },
-        },
+        config: true,
       },
     },
   },
+} as const
+
+type FormPublicationRaw = Prisma.FormPublicationGetPayload<typeof publicFormSelect>
+
+export type FormConfigStatus = {
+  auth_required: boolean
+  not_started: boolean
+  expired: boolean
+  is_open: boolean
+  max_reached: boolean
+  accepting_responses: boolean
+  single_response: boolean
+  allow_edit_response: boolean
 }
 
-export type FormPublicationWithForm = Prisma.FormPublicationGetPayload<typeof publicFormSelect>
+export type FormPublicationWithStatus = Omit<FormPublicationRaw, 'form'> & {
+  config_status: FormConfigStatus
+}
 
 export interface PublicationServicePublish {
   form_id: number

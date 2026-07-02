@@ -69,7 +69,7 @@ model Form {
   fields      FormField[]
   submissions FormSubmission[]
   publication FormPublication?
-  config      FormPublicationConfig?
+  config      FormConfig?
 
   @@map("forms")
 }
@@ -85,15 +85,18 @@ model FormPublication {
   @@map("form_publications")
 }
 
-model FormPublicationConfig {
-  id              Int      @id @default(autoincrement())
-  form_id         Int      @unique
-  expires_at      DateTime?
-  max_responses   Int?
-  allow_anonymous Boolean  @default(false)
-  form            Form     @relation(fields: [form_id], references: [id], onDelete: Cascade)
+model FormConfig {
+  id                       Int       @id @default(autoincrement())
+  form_id                  Int       @unique
+  starts_at                DateTime?
+  expires_at               DateTime?
+  max_responses            Int?
+  allow_anonymous          Boolean   @default(false)
+  single_response_per_user Boolean   @default(false)
+  allow_edit_response      Boolean   @default(false)
+  form                     Form      @relation(fields: [form_id], references: [id], onDelete: Cascade)
 
-  @@map("form_publication_configs")
+  @@map("form_configs")
 }
 
 model FormSection {

@@ -7,7 +7,8 @@ import { CurrentUser } from 'src/shared/decorators/current-user.decorator'
 import { createFormSchema, type CreateFormDto } from './dto/create-form.dto'
 import { updateFormSchema, type UpdateFormDto } from './dto/update-form.dto'
 import { getAllFormsSchema, type GetAllFormsDto } from './dto/get-all-forms.dto'
-import { type FormPaginatedResult, type FormFavoriteResult } from './interface/form.interface'
+import { updateFormConfigSchema, type UpdateFormConfigDto } from './dto/update-form-config.dto'
+import { type FormPaginatedResult, type FormFavoriteResult, type FormConfig } from './interface/form.interface'
 import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common'
 
 @Controller('forms')
@@ -40,6 +41,22 @@ export class FormController {
     @ZodBody(updateFormSchema) body: UpdateFormDto,
   ): Promise<Form> {
     return this.formService.updateForm({ form_id, user_id, data: body })
+  }
+
+  @Get(':form_id/config')
+  @UseGuards(JwtAuthGuard)
+  async getFormConfig(@Param('form_id', ParseIntPipe) form_id: number): Promise<FormConfig> {
+    return this.formService.getFormConfig({ form_id })
+  }
+
+  @Patch(':form_id/config')
+  @UseGuards(JwtAuthGuard)
+  async updateFormConfig(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @CurrentUser() user_id: number,
+    @ZodBody(updateFormConfigSchema) body: UpdateFormConfigDto,
+  ): Promise<FormConfig> {
+    return this.formService.updateFormConfig({ form_id, user_id, data: body })
   }
 
   @Patch(':form_id/favorite')

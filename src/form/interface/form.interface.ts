@@ -1,6 +1,7 @@
-import { Form } from 'src/generated/prisma/client'
+import { Form, FormConfig } from 'src/generated/prisma/client'
 import type { CreateFormDto } from '../dto/create-form.dto'
 import type { UpdateFormDto } from '../dto/update-form.dto'
+import type { UpdateFormConfigDto } from '../dto/update-form-config.dto'
 
 export interface FormServiceCreate {
   data: CreateFormDto
@@ -33,6 +34,18 @@ export interface FormServiceToggleFavorite {
   form_id: number
   user_id: number
 }
+
+export interface FormServiceGetFormConfig {
+  form_id: number
+}
+
+export interface FormServiceUpdateFormConfig {
+  form_id: number
+  user_id: number
+  data: UpdateFormConfigDto
+}
+
+export type { FormConfig }
 
 export type FormFavoriteResult = Pick<Form, 'id' | 'is_favorite'>
 
