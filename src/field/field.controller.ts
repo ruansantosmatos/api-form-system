@@ -13,7 +13,6 @@ export class FieldController {
   constructor(private readonly fieldService: FieldService) {}
 
   @Get('fields/categories/types')
-  @UseGuards(JwtAuthGuard)
   async getFieldCategories() {
     return this.fieldService.getFieldCategories()
   }
@@ -34,6 +33,12 @@ export class FieldController {
   @UseGuards(JwtAuthGuard)
   async updateFormFields(@Param('form_id', ParseIntPipe) form_id: number, @ZodBody(updateFieldsSchema) body: UpdateFieldsDto) {
     return this.fieldService.updateFormFields({ form_id, fields: body.fields })
+  }
+
+  @Post(':form_id/fields/:field_id/clone')
+  @UseGuards(JwtAuthGuard)
+  async cloneFormField(@Param('form_id', ParseIntPipe) form_id: number, @Param('field_id', ParseIntPipe) field_id: number): Promise<FormField> {
+    return this.fieldService.cloneFormField({ form_id, field_id })
   }
 
   @Delete(':form_id/fields/:field_id')

@@ -7,5 +7,6 @@ import { TokenModule } from 'src/shared/modules/token.module'
   imports: [TokenModule],
   providers: [SubmissionService],
   controllers: [SubmissionController],
+  exports: [SubmissionService],
 })
 export class SubmissionModule {}

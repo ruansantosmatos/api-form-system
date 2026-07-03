@@ -60,6 +60,7 @@ model Form {
   title       String        @db.VarChar(100)
   description String        @db.LongText
   published      Boolean       @default(false)
+  is_favorite    Boolean       @default(false)
   created_at     DateTime?     @default(now())
   updated_at     DateTime?
   last_opened_at DateTime?
@@ -67,8 +68,35 @@ model Form {
   sections    FormSection[]
   fields      FormField[]
   submissions FormSubmission[]
+  publication FormPublication?
+  config      FormConfig?
 
   @@map("forms")
+}
+
+model FormPublication {
+  id           Int      @id @default(autoincrement())
+  form_id      Int      @unique
+  hash         String   @unique @db.VarChar(64)
+  published_at DateTime @default(now())
+  is_active    Boolean  @default(true)
+  form         Form     @relation(fields: [form_id], references: [id])
+
+  @@map("form_publications")
+}
+
+model FormConfig {
+  id                       Int       @id @default(autoincrement())
+  form_id                  Int       @unique
+  starts_at                DateTime?
+  expires_at               DateTime?
+  max_responses            Int?
+  allow_anonymous          Boolean   @default(false)
+  single_response_per_user Boolean   @default(false)
+  allow_edit_response      Boolean   @default(false)
+  form                     Form      @relation(fields: [form_id], references: [id], onDelete: Cascade)
+
+  @@map("form_configs")
 }
 
 model FormSection {

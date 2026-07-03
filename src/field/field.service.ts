@@ -1,4 +1,4 @@
-import { FormField } from 'src/generated/prisma/client'
+import { FormField, FormFieldOption, Prisma } from 'src/generated/prisma/client'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import type {
@@ -10,6 +10,7 @@ import type {
   FieldServiceCreateFieldOption,
   FieldServiceUpdateFieldOption,
   FieldServiceDeleteFieldOption,
+  FieldServiceCloneFormField,
   FieldCategoryWithTypes,
 } from './interface/field.interface'
 
@@ -24,6 +25,13 @@ export class FieldService {
 
     if (!field) throw new NotFoundException('Field not found')
     return field
+  }
+
+  private async cloneOptionsForField(tx: Prisma.TransactionClient, options: FormFieldOption[], field_id: number): Promise<void> {
+    if (options.length === 0) return
+    await tx.formFieldOption.createMany({
+      data: options.map(({ id: _id, field_id: _fid, created_at: _ca, updated_at: _ua, ...opt }) => ({ ...opt, field_id })),
+    })
   }
 
   private async validateFieldRelations(category_id?: number, type_id?: number) {
@@ -110,14 +118,36 @@ export class FieldService {
     const field = await this.prisma.formField.findUnique({ where: { id: field_id, form_id } })
     if (!field) throw new NotFoundException('Field not found')
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async tx => {
       const answers = await tx.formSubmissionAnswer.findMany({ where: { field_id }, select: { id: true } })
-      const answerIds = answers.map((a) => a.id)
+      const answerIds = answers.map(a => a.id)
 
       await tx.formSubmissionAnswerOption.deleteMany({ where: { answer_id: { in: answerIds } } })
       await tx.formSubmissionAnswer.deleteMany({ where: { field_id } })
       await tx.formFieldOption.deleteMany({ where: { field_id } })
       await tx.formField.delete({ where: { id: field_id } })
+    })
+  }
+
+  async cloneFormField({ form_id, field_id }: FieldServiceCloneFormField): Promise<FormField> {
+    const source = await this.prisma.formField.findUnique({
+      where: { id: field_id, form_id, section_id: null },
+      include: { options: true },
+    })
+    if (!source) throw new NotFoundException('Field not found')
+
+    const nextOrder = source.order + 1
+
+    return this.prisma.$transaction(async tx => {
+      await tx.formField.updateMany({
+        where: { form_id, section_id: null, order: { gte: nextOrder } },
+        data: { order: { increment: 1 } },
+      })
+
+      const { id: _id, section_id: _sid, form_id: _fid, created_at: _ca, updated_at: _ua, options, ...fieldData } = source
+      const cloned = await tx.formField.create({ data: { ...fieldData, form_id, order: nextOrder } })
+      await this.cloneOptionsForField(tx, options, cloned.id)
+      return cloned
     })
   }
 
