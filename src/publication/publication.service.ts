@@ -3,10 +3,11 @@ import { FormConfig, FormPublication } from 'src/generated/prisma/client'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common'
 import type {
+  PublicField,
   FormConfigStatus,
+  FormPublicResponse,
   PublicationServicePublish,
   PublicationServiceGetByHash,
-  FormPublicationWithStatus,
   PublicationServiceGetPublication,
   PublicationServiceUpdatePublication,
   PublicationServiceDeactivatePublication,
@@ -86,19 +87,75 @@ export class PublicationService {
     })
   }
 
-  async getByHash({ hash }: PublicationServiceGetByHash): Promise<FormPublicationWithStatus> {
+  async getByHash({ hash }: PublicationServiceGetByHash): Promise<FormPublicResponse> {
+    const fieldSelect = {
+      id: true,
+      label: true,
+      required: true,
+      order: true,
+      type: { select: { name: true } },
+      category: { select: { name: true } },
+      options: { select: { id: true, label: true, value: true } },
+    } as const
+
     const publication = await this.prisma.formPublication.findUnique({
       where: { hash },
-      include: { form: { select: { config: true } } },
+      include: {
+        form: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            config: true,
+            sections: {
+              orderBy: { order: 'asc' },
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                order: true,
+                fields: { orderBy: { order: 'asc' }, select: fieldSelect },
+              },
+            },
+            fields: {
+              where: { section_id: null },
+              orderBy: { order: 'asc' },
+              select: fieldSelect,
+            },
+          },
+        },
+      },
     })
 
     if (!publication) throw new NotFoundException('Publication not found')
     if (!publication.is_active) throw new GoneException('This form is no longer accepting responses')
 
     const submissionCount = await this.prisma.formSubmission.count({ where: { form_id: publication.form_id } })
-    const config_status = this.computeConfigStatus(publication.form.config, submissionCount, publication.is_active)
+    const { form, id, hash: pubHash, form_id, published_at, is_active } = publication
+    const { config, sections, fields, ...formInfo } = form
 
-    const { form: _, ...publicationData } = publication
-    return { ...publicationData, config_status }
+    const toPublicField = (f: typeof fields[number]): PublicField => ({
+      id: f.id,
+      label: f.label,
+      required: f.required,
+      order: f.order,
+      type: f.type.name,
+      category: f.category.name,
+      options: f.options,
+    })
+
+    return {
+      publication: {
+        id,
+        hash: pubHash,
+        form_id,
+        published_at,
+        is_active,
+        config_status: this.computeConfigStatus(config, submissionCount, is_active),
+      },
+      form: formInfo,
+      sections: sections.map(({ fields, ...s }) => ({ ...s, fields: fields.map(toPublicField) })),
+      fields: fields.map(toPublicField),
+    }
   }
 }

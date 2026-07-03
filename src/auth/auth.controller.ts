@@ -1,4 +1,4 @@
-import type { Response } from 'express'
+import type { Response, Request } from 'express'
 import { AuthService } from './auth.service'
 import { ConfigService } from '@nestjs/config'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
@@ -30,24 +30,36 @@ export class AuthController {
   }
 
   @Get('github')
-  async github(@Res() res: Response, @Query('error_redirect') errorRedirect?: string, @Query('remember_me') rememberMe?: string) {
+  async github(
+    @Res() res: Response,
+    @Query('error_redirect') errorRedirect?: string,
+    @Query('remember_me') rememberMe?: string,
+    @Query('redirect') redirect?: string,
+  ) {
     const cookieOptions = getCookieOptions()
     const { url, state } = this.authService.redirectToGithub()
 
     res.cookie('oauth_state', state, cookieOptions)
     if (errorRedirect?.startsWith('/')) res.cookie('oauth_error_redirect', errorRedirect, cookieOptions)
+    if (redirect?.startsWith('/')) res.cookie('oauth_redirect', redirect, cookieOptions)
 
     if (rememberMe === 'true') res.cookie('oauth_remember_me', 'true', cookieOptions)
     res.redirect(url)
   }
 
   @Get('google')
-  async google(@Res() res: Response, @Query('error_redirect') errorRedirect?: string, @Query('remember_me') rememberMe?: string) {
+  async google(
+    @Res() res: Response,
+    @Query('error_redirect') errorRedirect?: string,
+    @Query('remember_me') rememberMe?: string,
+    @Query('redirect') redirect?: string,
+  ) {
     const cookieOptions = getCookieOptions()
     const { url, state } = this.authService.redirectToGoogle()
 
     res.cookie('oauth_state', state, cookieOptions)
     if (errorRedirect?.startsWith('/')) res.cookie('oauth_error_redirect', errorRedirect, cookieOptions)
+    if (redirect?.startsWith('/')) res.cookie('oauth_redirect', redirect, cookieOptions)
 
     if (rememberMe === 'true') res.cookie('oauth_remember_me', 'true', cookieOptions)
     res.redirect(url)
@@ -95,18 +107,20 @@ export class AuthController {
   async githubCallback(@Res() res: Response, @Query('code') code: string, @ClientInfo() client: ClientInfoType, @Req() req: Request) {
     const cookieOptions = getCookieOptions()
     const clientUrl = this.configService.get<string>('CLIENT_URL')
-    const rememberMe = (req as any).cookies?.['oauth_remember_me'] === 'true'
+    const rememberMe = req.cookies['oauth_remember_me'] === 'true'
+    const redirect: string = req.cookies['oauth_redirect'] ?? '/home'
 
     const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGithub({ code, client, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
     res.clearCookie('oauth_remember_me', cookieOptions)
+    res.clearCookie('oauth_redirect', cookieOptions)
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
     res.cookie('session_id', session_id, cookieOptions)
     res.cookie('user', JSON.stringify(user), cookieOptions)
-    res.redirect(`${clientUrl}/home`)
+    res.redirect(`${clientUrl}${redirect}`)
   }
 
   @Get('google/callback')
@@ -114,17 +128,20 @@ export class AuthController {
   async googleLogin(@Res() res: Response, @Query('code') code: string, @ClientInfo() client: ClientInfoType, @Req() req: Request) {
     const cookieOptions = getCookieOptions()
     const clientUrl = this.configService.get<string>('CLIENT_URL')
-    const rememberMe = (req as any).cookies?.['oauth_remember_me'] === 'true'
+    
+    const rememberMe = req.cookies['oauth_remember_me'] === 'true'
+    const redirect: string = req.cookies['oauth_redirect'] ?? '/home'
 
     const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGoogle({ client, code, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
     res.clearCookie('oauth_remember_me', cookieOptions)
+    res.clearCookie('oauth_redirect', cookieOptions)
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
     res.cookie('session_id', session_id, cookieOptions)
     res.cookie('user', JSON.stringify(user), cookieOptions)
-    res.redirect(`${clientUrl}/home`)
+    res.redirect(`${clientUrl}${redirect}`)
   }
 }

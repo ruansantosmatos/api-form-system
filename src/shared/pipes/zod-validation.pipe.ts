@@ -10,7 +10,11 @@ export class ZodValidationPipe implements PipeTransform {
       const validatedData = this.schema.parse(value)
       return validatedData
     } catch (error) {
-      if (error instanceof zod.ZodError) throw new BadRequestException({ errors: this.formatIssues(error.issues) })
+      if (error instanceof zod.ZodError) {
+        const formatted = this.formatIssues(error.issues)
+        console.log('[ZodValidationPipe] validation errors:', JSON.stringify(formatted, null, 2))
+        throw new BadRequestException({ errors: formatted })
+      }
       throw new InternalServerErrorException()
     }
   }

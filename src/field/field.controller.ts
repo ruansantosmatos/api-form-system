@@ -13,7 +13,6 @@ export class FieldController {
   constructor(private readonly fieldService: FieldService) {}
 
   @Get('fields/categories/types')
-  @UseGuards(JwtAuthGuard)
   async getFieldCategories() {
     return this.fieldService.getFieldCategories()
   }

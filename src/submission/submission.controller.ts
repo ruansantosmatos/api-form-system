@@ -11,13 +11,11 @@ export class SubmissionController {
   constructor(private readonly submissionService: SubmissionService) {}
 
   @Post(':form_id/submissions')
-  @UseGuards(JwtAuthGuard)
   async create(
     @Param('form_id', ParseIntPipe) form_id: number,
-    @CurrentUser() respondent_id: number,
     @ZodBody(createSubmissionSchema) body: CreateSubmissionDto,
   ): Promise<SubmissionCreateResult> {
-    return this.submissionService.create({ form_id, respondent_id, answers: body.answers })
+    return this.submissionService.create({ form_id, respondent_id: body.respondent_id ?? null, answers: body.answers })
   }
 
   @Get(':form_id/submissions')

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const createSubmissionSchema = z.object({
+  respondent_id: z.number().int().positive().optional(),
   answers: z
     .array(
       z.object({
