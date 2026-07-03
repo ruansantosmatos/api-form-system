@@ -5,6 +5,7 @@ import { FormModule } from './form/form.module'
 import { FieldModule } from './field/field.module'
 import { SectionModule } from './section/section.module'
 import { SubmissionModule } from './submission/submission.module'
+import { PublicationModule } from './publication/publication.module'
 import { SecurityModule } from './shared/modules/security.module'
 import { PrismaClientModule } from './shared/modules/prisma-client.module'
 
@@ -16,6 +17,7 @@ import { PrismaClientModule } from './shared/modules/prisma-client.module'
     FieldModule,
     SectionModule,
     SubmissionModule,
+    PublicationModule,
     SecurityModule,
     PrismaClientModule,
     ConfigModule.forRoot({ isGlobal: true }),

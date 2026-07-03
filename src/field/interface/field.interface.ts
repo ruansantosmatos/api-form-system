@@ -54,3 +54,8 @@ export interface FieldServiceDeleteFieldOption {
   field_id: number
   option_id: number
 }
+
+export interface FieldServiceCloneFormField {
+  form_id: number
+  field_id: number
+}

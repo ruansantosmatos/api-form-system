@@ -88,3 +88,20 @@ export interface SectionServiceCreateSectionFieldOption {
   field_id: number
   data: CreateFieldOptionDto
 }
+
+export interface SectionServiceCloneSection {
+  form_id: number
+  section_id: number
+}
+
+export interface SectionServiceCloneSectionField {
+  form_id: number
+  section_id: number
+  field_id: number
+}
+
+export interface SectionServiceMergeSections {
+  form_id: number
+  source_id: number
+  target_id: number
+}

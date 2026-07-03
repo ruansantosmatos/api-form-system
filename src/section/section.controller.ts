@@ -52,6 +52,15 @@ export class SectionController {
     return this.sectionService.getSectionFields({ form_id, section_id })
   }
 
+  @Post(':form_id/sections/:section_id/clone')
+  @UseGuards(JwtAuthGuard)
+  async cloneSection(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @Param('section_id', ParseIntPipe) section_id: number,
+  ): Promise<SectionWithFields> {
+    return this.sectionService.cloneSection({ form_id, section_id })
+  }
+
   @Post(':form_id/sections/:section_id/fields')
   @UseGuards(JwtAuthGuard)
   async createSectionField(
@@ -81,6 +90,16 @@ export class SectionController {
     @Param('field_id', ParseIntPipe) field_id: number,
   ): Promise<void> {
     await this.sectionService.deleteSectionField({ form_id, section_id, field_id })
+  }
+
+  @Post(':form_id/sections/:section_id/fields/:field_id/clone')
+  @UseGuards(JwtAuthGuard)
+  async cloneSectionField(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @Param('section_id', ParseIntPipe) section_id: number,
+    @Param('field_id', ParseIntPipe) field_id: number,
+  ): Promise<FormField> {
+    return this.sectionService.cloneSectionField({ form_id, section_id, field_id })
   }
 
   @Get(':form_id/sections/:section_id/fields/:field_id/options')
@@ -115,6 +134,16 @@ export class SectionController {
     @Param('option_id', ParseIntPipe) option_id: number,
   ): Promise<void> {
     await this.sectionService.deleteSectionFieldOption({ form_id, section_id, field_id, option_id })
+  }
+
+  @Post(':form_id/sections/:source_id/merge/:target_id')
+  @UseGuards(JwtAuthGuard)
+  async mergeSections(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @Param('source_id', ParseIntPipe) source_id: number,
+    @Param('target_id', ParseIntPipe) target_id: number,
+  ): Promise<SectionWithFields> {
+    return this.sectionService.mergeSections({ form_id, source_id, target_id })
   }
 
   @Post(':form_id/sections/:section_id/fields/:field_id/options')

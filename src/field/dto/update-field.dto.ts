@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { createFieldSchema } from './create-field.dto'
 
 export const updateFieldItemSchema = createFieldSchema
+  .extend({ label: z.string().max(150).trim() })
   .partial()
   .extend({ id: z.number().int().positive() })
   .refine(({ id: _id, ...rest }) => Object.keys(rest).length > 0, { message: 'At least one field must be provided' })

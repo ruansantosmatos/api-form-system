@@ -7,33 +7,40 @@ import type {
   FormServiceGetForm,
   FormServiceUpdateForm,
   FormServiceDeleteForm,
+  FormServiceToggleFavorite,
+  FormServiceGetFormConfig,
+  FormServiceUpdateFormConfig,
+  FormFavoriteResult,
   FormPaginatedResult,
+  FormConfig,
 } from './interface/form.interface'
 
 @Injectable()
 export class FormService {
   constructor(private readonly prisma: PrismaClientService) {}
 
-  async getAll({ user_id, page, limit, sort }: FormServiceGetAll): Promise<FormPaginatedResult> {
+  async getAll({ user_id, page, limit, sort, favorite }: FormServiceGetAll): Promise<FormPaginatedResult> {
     const skip = (page - 1) * limit
+    const where = { user_id, ...(favorite !== undefined && { is_favorite: favorite }) }
 
     const [forms, total] = await this.prisma.$transaction([
       this.prisma.form.findMany({
         skip,
         take: limit,
-        where: { user_id },
+        where,
         orderBy: { title: sort },
         select: {
           id: true,
           title: true,
           published: true,
+          is_favorite: true,
           created_at: true,
           updated_at: true,
           description: true,
           last_opened_at: true,
         },
       }),
-      this.prisma.form.count({ where: { user_id } }),
+      this.prisma.form.count({ where }),
     ])
 
     return {
@@ -47,8 +54,20 @@ export class FormService {
     }
   }
 
+  async toggleFavorite({ form_id, user_id }: FormServiceToggleFavorite): Promise<FormFavoriteResult> {
+    const form = await this.prisma.form.findUnique({ where: { id: form_id } })
+    if (!form) throw new NotFoundException('Form not found')
+    if (form.user_id !== user_id) throw new ForbiddenException('Form not access')
+
+    return this.prisma.form.update({
+      where: { id: form_id },
+      data: { is_favorite: !form.is_favorite },
+      select: { id: true, is_favorite: true },
+    })
+  }
+
   async create({ data }: FormServiceCreate): Promise<Form> {
-    return this.prisma.form.create({ data })
+    return this.prisma.form.create({ data: { ...data, config: { create: {} } } })
   }
 
   async getForm({ form_id }: FormServiceGetForm): Promise<Form> {
@@ -68,6 +87,20 @@ export class FormService {
 
     if (form.user_id !== user_id) throw new ForbiddenException('Form not access')
     return this.prisma.form.update({ where: { id: form_id }, data: { ...data, updated_at: new Date() } })
+  }
+
+  async getFormConfig({ form_id }: FormServiceGetFormConfig): Promise<FormConfig> {
+    const config = await this.prisma.formConfig.findUnique({ where: { form_id } })
+    if (!config) throw new NotFoundException('Form config not found')
+    return config
+  }
+
+  async updateFormConfig({ form_id, user_id, data }: FormServiceUpdateFormConfig): Promise<FormConfig> {
+    const form = await this.prisma.form.findUnique({ where: { id: form_id } })
+    if (!form) throw new NotFoundException('Form not found')
+
+    if (form.user_id !== user_id) throw new ForbiddenException('Form not access')
+    return this.prisma.formConfig.update({ where: { form_id }, data })
   }
 
   async deleteForm({ form_id, user_id }: FormServiceDeleteForm): Promise<void> {
@@ -102,6 +135,7 @@ export class FormService {
       await tx.formFieldOption.deleteMany({ where: { field_id: { in: fieldIds } } })
       await tx.formField.deleteMany({ where: { form_id } })
       await tx.formSection.deleteMany({ where: { form_id } })
+      await tx.formPublication.deleteMany({ where: { form_id } })
       await tx.form.delete({ where: { id: form_id } })
     })
   }
