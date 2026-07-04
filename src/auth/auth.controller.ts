@@ -113,8 +113,9 @@ export class AuthController {
     const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGithub({ code, client, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
-    res.clearCookie('oauth_remember_me', cookieOptions)
     res.clearCookie('oauth_redirect', cookieOptions)
+    res.clearCookie('oauth_remember_me', cookieOptions)
+
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
@@ -135,8 +136,9 @@ export class AuthController {
     const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGoogle({ client, code, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
-    res.clearCookie('oauth_remember_me', cookieOptions)
     res.clearCookie('oauth_redirect', cookieOptions)
+    res.clearCookie('oauth_remember_me', cookieOptions)
+
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
