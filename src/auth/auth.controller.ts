@@ -13,6 +13,8 @@ import { type AuthLogoutDto, authLogoutSchema } from './dto/auth-logout.dto'
 import { type AuthRefreshDto, authRefreshSchema } from './dto/auth-refresh.dto'
 import { OAuthProviderRedirectGuard } from 'src/shared/guards/oauth-provider.guard'
 import { createRegisterSchema, type CreateRegisterDto } from './dto/auth-register.dto'
+import { authForgotPasswordSchema, type AuthForgotPasswordDto } from './dto/auth-forgot-password.dto'
+import { authResetPasswordSchema, type AuthResetPasswordDto } from './dto/auth-reset-password.dto'
 import { Controller, Get, Injectable, Post, Query, Req, Res, UseGuards } from '@nestjs/common'
 
 @Injectable()
@@ -90,6 +92,16 @@ export class AuthController {
     res.cookie('session_id', session_id, cookieOptions)
     res.cookie('user', JSON.stringify(user), cookieOptions)
     res.status(200).json({ session: { session_id }, user })
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@ZodBody(authForgotPasswordSchema) body: AuthForgotPasswordDto) {
+    return this.authService.forgotPassword(body)
+  }
+
+  @Post('reset-password')
+  async resetPassword(@ZodBody(authResetPasswordSchema) body: AuthResetPasswordDto) {
+    return this.authService.resetPassword(body)
   }
 
   @Post('refresh')

@@ -6,6 +6,7 @@ import { FieldModule } from './field/field.module'
 import { SectionModule } from './section/section.module'
 import { SubmissionModule } from './submission/submission.module'
 import { PublicationModule } from './publication/publication.module'
+import { MailModule } from './shared/modules/mail.module'
 import { SecurityModule } from './shared/modules/security.module'
 import { PrismaClientModule } from './shared/modules/prisma-client.module'
 
@@ -20,6 +21,7 @@ import { PrismaClientModule } from './shared/modules/prisma-client.module'
     PublicationModule,
     SecurityModule,
     PrismaClientModule,
+    MailModule,
     ConfigModule.forRoot({ isGlobal: true }),
   ],
 })
