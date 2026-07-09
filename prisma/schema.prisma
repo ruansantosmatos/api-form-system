@@ -9,17 +9,30 @@ generator client {
 }
 
 model User {
-  id          Int          @id() @default(autoincrement())
-  name        String       @db.VarChar(80)
-  email       String       @unique() @db.VarChar(80)
-  createdAt   DateTime?    @default(now())
-  updatedAt   DateTime?
-  forms       Form[]
-  sessions    Session[]
-  authMethods AuthMethod[]
-  submissions FormSubmission[]
+  id                  Int                  @id() @default(autoincrement())
+  name                String               @db.VarChar(80)
+  email               String               @unique() @db.VarChar(80)
+  createdAt           DateTime?            @default(now())
+  updatedAt           DateTime?
+  forms               Form[]
+  sessions            Session[]
+  authMethods         AuthMethod[]
+  submissions         FormSubmission[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id         Int       @id() @default(autoincrement())
+  user_id    Int
+  token_hash String    @unique() @db.VarChar(64)
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime? @default(now())
+  user       User      @relation(fields: [user_id], references: [id])
+
+  @@map("password_reset_tokens")
 }
 
 model Session {

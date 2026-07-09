@@ -1,9 +1,11 @@
 import { SubmissionService } from './submission.service'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
+import { ZodQuery } from 'src/shared/decorators/zod-query.decorator'
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator'
 import { Controller, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common'
 import { createSubmissionSchema, type CreateSubmissionDto } from './dto/create-submission.dto'
+import { getAllSubmissionsSchema, type GetAllSubmissionsDto } from './dto/get-all-submissions.dto'
 import { type SubmissionCreateResult, type SubmissionDetailResult, type SubmissionListResult } from './interface/submission.interface'
 
 @Controller('forms')
@@ -20,8 +22,12 @@ export class SubmissionController {
 
   @Get(':form_id/submissions')
   @UseGuards(JwtAuthGuard)
-  async getAll(@Param('form_id', ParseIntPipe) form_id: number, @CurrentUser() user_id: number): Promise<SubmissionListResult> {
-    return this.submissionService.getAll({ form_id, user_id })
+  async getAll(
+    @Param('form_id', ParseIntPipe) form_id: number,
+    @CurrentUser() user_id: number,
+    @ZodQuery(getAllSubmissionsSchema) query: GetAllSubmissionsDto,
+  ): Promise<SubmissionListResult> {
+    return this.submissionService.getAll({ form_id, user_id, ...query })
   }
 
   @Get(':form_id/submissions/me')

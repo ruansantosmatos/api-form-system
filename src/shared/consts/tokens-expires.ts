@@ -4,6 +4,7 @@ export const TOKENS_EXPIRES = {
     DEFAULT: 7 * 24 * 60 * 60 * 1000, // 7 days - matches SESSION_EXPIRES_DAYS.ABSOLUTE.DEFAULT
     REMEMBER_ME: 90 * 24 * 60 * 60 * 1000, // 90 days - matches SESSION_EXPIRES_DAYS.ABSOLUTE.REMEMBER_ME
   },
+  PASSWORD_RESET: 60 * 60 * 1000, // 1 hour
 }
 
 export const SESSION_EXPIRES_DAYS = {

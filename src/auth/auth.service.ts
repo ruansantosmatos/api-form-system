@@ -1,7 +1,11 @@
+import { randomBytes, createHash } from 'crypto'
+import { ConfigService } from '@nestjs/config'
 import { AUTH_METHOD } from 'src/shared/consts/auth-method'
 import { AUTH_PROVIDER } from 'src/shared/consts/auth-provider'
 import { REVOCATION } from '../shared/consts/revocation-reason'
+import { MailService } from 'src/shared/services/mail.service'
 import { SessionService } from 'src/shared/services/session.service'
+import { TOKENS_EXPIRES } from 'src/shared/consts/tokens-expires'
 import { SecurityService } from '../shared/services/security.service'
 import { GithubAuthService } from 'src/shared/services/github-auth.service'
 import { GoogleAuthService } from 'src/shared/services/google-auth.service'
@@ -17,12 +21,18 @@ import {
   AuthOAuthRedirectResult,
   AuthLogoutResult,
   AuthServiceLogout,
+  AuthServiceForgotPassword,
+  AuthServiceResetPassword,
+  AuthForgotPasswordResult,
+  AuthResetPasswordResult,
 } from './interface/auth.interface'
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaClientService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService,
     private readonly sessionService: SessionService,
     private readonly securityService: SecurityService,
     private readonly googleAuthService: GoogleAuthService,
@@ -213,5 +223,59 @@ export class AuthService {
 
     const session = await this.sessionService.create({ user_id: new_user.id, client, rememberMe })
     return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
+  }
+
+  async forgotPassword({ email }: AuthServiceForgotPassword): Promise<AuthForgotPasswordResult> {
+    const message = 'If an account with that email exists, a password reset link has been sent.'
+    const user = await this.prisma.user.findUnique({ where: { email } })
+
+    if (!user) return { message }
+
+    const token = randomBytes(32).toString('hex')
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+    const expiresAt = new Date(Date.now() + TOKENS_EXPIRES.PASSWORD_RESET)
+
+    await this.prisma.passwordResetToken.create({ data: { user_id: user.id, token_hash: tokenHash, expires_at: expiresAt } })
+    const clientUrl = this.configService.get<string>('CLIENT_URL')
+    const resetLink = `${clientUrl}/reset?token=${token}`
+    const expiresInHours = TOKENS_EXPIRES.PASSWORD_RESET / (60 * 60 * 1000)
+
+    await this.mailService.send({
+      to: user.email,
+      subject: 'Reset your password',
+      template: {
+        id: 'password-reset-1',
+        variables: {
+          user_name: user.name,
+          reset_link: resetLink,
+          app_name: this.configService.get<string>('APP_NAME', 'Form System'),
+          expires_in: `${expiresInHours} hora${expiresInHours === 1 ? '' : 's'}`,
+        },
+      },
+    })
+
+    return { message }
+  }
+
+  async resetPassword({ token, password }: AuthServiceResetPassword): Promise<AuthResetPasswordResult> {
+    const now = new Date()
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+
+    const resetToken = await this.prisma.passwordResetToken.findUnique({ where: { token_hash: tokenHash } })
+    if (!resetToken || resetToken.used_at || resetToken.expires_at < now) throw new BadRequestException('Invalid or expired token.')
+
+    const password_hash = await this.securityService.hash(password)
+    const authMethod = await this.prisma.authMethod.findFirst({ where: { user_id: resetToken.user_id, type: AUTH_METHOD.PASSWORD } })
+
+    authMethod ?
+    await this.prisma.authMethod.update({ where: { id: authMethod.id }, data: { password_hash } }) :
+    await this.prisma.authMethod.create({ data: { user_id: resetToken.user_id, type: AUTH_METHOD.PASSWORD, password_hash } })
+
+    await this.prisma.passwordResetToken.updateMany({
+      where: { user_id: resetToken.user_id, used_at: null },
+      data: { used_at: now },
+    })
+
+    return { message: 'Password reset successfully.' }
   }
 }

@@ -12,7 +12,8 @@ export interface FormServiceGetAll {
   page: number
   limit: number
   sort: 'asc' | 'desc'
-  favorite?: boolean
+  status: 'all' | 'published' | 'unpublished' | 'favorite'
+  search?: string
 }
 
 export interface FormServiceGetForm {
