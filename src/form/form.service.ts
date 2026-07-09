@@ -19,9 +19,14 @@ import type {
 export class FormService {
   constructor(private readonly prisma: PrismaClientService) {}
 
-  async getAll({ user_id, page, limit, sort, favorite }: FormServiceGetAll): Promise<FormPaginatedResult> {
+  async getAll({ user_id, page, limit, sort, status, search }: FormServiceGetAll): Promise<FormPaginatedResult> {
     const skip = (page - 1) * limit
-    const where = { user_id, ...(favorite !== undefined && { is_favorite: favorite }) }
+    const where = {
+      user_id,
+      ...(search && { title: { contains: search } }),
+      ...(status === 'favorite' && { is_favorite: true }),
+      ...((status === 'published' || status === 'unpublished') && { published: status === 'published' }),
+    }
 
     const [forms, total] = await this.prisma.$transaction([
       this.prisma.form.findMany({

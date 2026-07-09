@@ -13,6 +13,8 @@ import { type AuthLogoutDto, authLogoutSchema } from './dto/auth-logout.dto'
 import { type AuthRefreshDto, authRefreshSchema } from './dto/auth-refresh.dto'
 import { OAuthProviderRedirectGuard } from 'src/shared/guards/oauth-provider.guard'
 import { createRegisterSchema, type CreateRegisterDto } from './dto/auth-register.dto'
+import { authForgotPasswordSchema, type AuthForgotPasswordDto } from './dto/auth-forgot-password.dto'
+import { authResetPasswordSchema, type AuthResetPasswordDto } from './dto/auth-reset-password.dto'
 import { Controller, Get, Injectable, Post, Query, Req, Res, UseGuards } from '@nestjs/common'
 
 @Injectable()
@@ -92,6 +94,16 @@ export class AuthController {
     res.status(200).json({ session: { session_id }, user })
   }
 
+  @Post('forgot-password')
+  async forgotPassword(@ZodBody(authForgotPasswordSchema) body: AuthForgotPasswordDto) {
+    return this.authService.forgotPassword(body)
+  }
+
+  @Post('reset-password')
+  async resetPassword(@ZodBody(authResetPasswordSchema) body: AuthResetPasswordDto) {
+    return this.authService.resetPassword(body)
+  }
+
   @Post('refresh')
   async refresh(@Res() res: Response, @ZodBody(authRefreshSchema) body: AuthRefreshDto) {
     const cookieOptions = getCookieOptions()
@@ -113,8 +125,9 @@ export class AuthController {
     const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGithub({ code, client, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
-    res.clearCookie('oauth_remember_me', cookieOptions)
     res.clearCookie('oauth_redirect', cookieOptions)
+    res.clearCookie('oauth_remember_me', cookieOptions)
+
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
@@ -135,8 +148,9 @@ export class AuthController {
     const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGoogle({ client, code, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
-    res.clearCookie('oauth_remember_me', cookieOptions)
     res.clearCookie('oauth_redirect', cookieOptions)
+    res.clearCookie('oauth_remember_me', cookieOptions)
+
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 

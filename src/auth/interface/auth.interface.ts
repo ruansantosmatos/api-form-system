@@ -45,3 +45,16 @@ export type AuthServiceSignUp = {
   client: ClientInfoType
   data: AuthRegisterData
 }
+
+export type AuthForgotPasswordResult = { message: string }
+
+export type AuthResetPasswordResult = { message: string }
+
+export type AuthServiceForgotPassword = {
+  email: string
+}
+
+export type AuthServiceResetPassword = {
+  token: string
+  password: string
+}

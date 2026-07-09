@@ -11,25 +11,51 @@ export type SubmissionCreateResult = Prisma.FormSubmissionGetPayload<{
   }
 }> | null
 
-export type SubmissionListResult = Prisma.FormSubmissionGetPayload<{
-  include: { _count: { select: { answers: true } } }
-}>[]
+export type SubmissionRespondent = {
+  id: number
+  name: string
+  email: string
+}
 
-export type SubmissionDetailResult = Prisma.FormSubmissionGetPayload<{
-  include: {
-    answers: {
-      include: {
-        field: { select: { id: true; label: true } }
-        options: {
-          select: {
-            option_id: true
-            option: { select: { label: true; value: true } }
-          }
-        }
-      }
-    }
+export type SubmissionListItem = {
+  id: number
+  form_id: number
+  submitted_at: Date
+  answer_count: number
+  respondent: SubmissionRespondent | null
+}
+
+export type SubmissionListResult = {
+  data: SubmissionListItem[]
+  meta: {
+    total: number
+    page: number
+    limit: number
+    total_pages: number
   }
-}>
+}
+
+export type SubmissionAnswerOption = {
+  option_id: number
+  label: string
+  value: string
+}
+
+export type SubmissionAnswer = {
+  id: number
+  field_id: number
+  field_label: string
+  value: string | null
+  options: SubmissionAnswerOption[]
+}
+
+export type SubmissionDetailResult = {
+  id: number
+  form_id: number
+  respondent_id: number | null
+  submitted_at: Date
+  answers: SubmissionAnswer[]
+}
 
 export interface SubmissionServiceCreate {
   form_id: number
@@ -40,6 +66,9 @@ export interface SubmissionServiceCreate {
 export interface SubmissionServiceGetAll {
   form_id: number
   user_id: number
+  page: number
+  limit: number
+  sort: 'asc' | 'desc'
 }
 
 export interface SubmissionServiceGetOne {
