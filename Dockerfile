@@ -26,9 +26,8 @@ RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 
 # ---- Runtime stage ----
 FROM base AS runner
-ENV NODE_ENV=production \
-    PORT=3000
-
+ENV NODE_ENV=production
+ 
 RUN apk add --no-cache dumb-init && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
