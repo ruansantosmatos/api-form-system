@@ -1,0 +1,160 @@
+byHash:
+  get:
+    tags: [Publication]
+    summary: Get a published form by its public hash
+    description: >
+      Fully public endpoint — no authentication. Used to render a published form for
+      respondents. Exposes only resolved field type/category names (not their numeric ids) and
+      a computed config_status; raw FormConfig values (dates, max_responses) are never returned.
+    security: []
+    parameters:
+      - name: hash
+        in: path
+        required: true
+        description: 64-char hex publication hash.
+        schema:
+          type: string
+    responses:
+      '200':
+        description: The published form, its sections, and its fields.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/publication.yaml#/PublicFormResponse'
+      '404':
+        description: No publication exists for this hash.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Publication not found
+              error: Not Found
+      '410':
+        description: The publication exists but has been deactivated.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 410
+              message: This form is no longer accepting responses
+              error: Gone
+
+byFormId:
+  post:
+    tags: [Publication]
+    summary: Publish a form
+    description: >
+      Sets Form.published = true and creates a FormPublication row with a fresh random hash.
+      Takes no request body. Does not verify that the authenticated user owns the form.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '201':
+        description: The created publication.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/publication.yaml#/Publication'
+      '409':
+        description: The form already has a publication.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 409
+              message: This form has already been published
+              error: Conflict
+  get:
+    tags: [Publication]
+    summary: Get a form's current publication
+    description: Returns null (with a 200 status) if the form has never been published.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '200':
+        description: The publication, or null.
+        content:
+          application/json:
+            schema:
+              nullable: true
+              allOf:
+                - $ref: '../schemas/publication.yaml#/Publication'
+  patch:
+    tags: [Publication]
+    summary: Update a form's publication
+    description: Currently only supports toggling is_active.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/publication.yaml#/UpdatePublicationRequest'
+    responses:
+      '200':
+        description: Updated publication.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/publication.yaml#/Publication'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: No publication exists for this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Publication not found
+              error: Not Found
+  delete:
+    tags: [Publication]
+    summary: Deactivate a form's publication
+    description: >
+      Soft delete: sets Form.published = false and FormPublication.is_active = false. The
+      FormPublication row and its hash are kept (public access then returns 410 Gone).
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '204':
+        description: Publication deactivated.
+      '404':
+        description: No publication exists for this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Publication not found
+              error: Not Found
+
+formIdParam:
+  name: form_id
+  in: path
+  required: true
+  schema:
+    type: integer

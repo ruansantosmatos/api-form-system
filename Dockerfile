@@ -34,7 +34,9 @@ RUN apk add --no-cache dumb-init && \
 
 COPY --from=prod-deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+
 COPY --chown=nestjs:nodejs package.json ./
+COPY --chown=nestjs:nodejs docs ./docs
 
 USER nestjs
 

@@ -1,0 +1,591 @@
+list:
+  get:
+    tags: [Sections]
+    summary: List a form's sections
+    description: >
+      Returns sections ordered by "order" asc, each including its fields (also ordered by
+      "order" asc). No ownership check — any authenticated user can list any form's sections.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '200':
+        description: Sections with their fields.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/section.yaml#/SectionWithFields'
+  post:
+    tags: [Sections]
+    summary: Create a section on a form
+    description: >
+      Fields previously attached directly to the form (section_id null) are "adopted" into the
+      newly created section (their section_id is set and form_id cleared).
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/section.yaml#/CreateSectionRequest'
+    responses:
+      '201':
+        description: Section created.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/section.yaml#/Section'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '409':
+        description: Another section already uses this order value in the form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 409
+              message: A section with this order already exists in the form
+              error: Conflict
+  patch:
+    tags: [Sections]
+    summary: Bulk update (and reorder) sections
+    description: >
+      There is no dedicated reorder endpoint — send the new "order" for each section id in this
+      batch. If an id doesn't belong to form_id, the underlying update throws and surfaces as an
+      unhandled 500 (not a 404) — this endpoint does not pre-validate each id individually.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/section.yaml#/UpdateSectionsRequest'
+    responses:
+      '200':
+        description: Updated sections, in the order they were sent.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/section.yaml#/Section'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+
+byId:
+  delete:
+    tags: [Sections]
+    summary: Delete a section
+    description: >
+      Cascades to the section's fields' answer-options, submission answers, options, and fields.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+    responses:
+      '204':
+        description: Section deleted.
+      '404':
+        description: Section not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Section not found
+              error: Not Found
+
+clone:
+  post:
+    tags: [Sections]
+    summary: Clone a section, its fields, and their options
+    description: >
+      Inserted right after the source (order + 1), shifting later sections down. Title and
+      description are copied; created_at/updated_at are not.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+    responses:
+      '201':
+        description: Cloned section with its cloned fields.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/section.yaml#/SectionWithFields'
+      '404':
+        description: Section not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Section not found
+              error: Not Found
+
+fields:
+  get:
+    tags: [Sections]
+    summary: List a section's fields
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+    responses:
+      '200':
+        description: Fields ordered by "order" asc.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/field.yaml#/Field'
+      '404':
+        description: Section not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Section not found
+              error: Not Found
+  post:
+    tags: [Sections]
+    summary: Create a field inside a section
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/field.yaml#/CreateFieldRequest'
+    responses:
+      '201':
+        description: Field created.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/field.yaml#/FieldWithCategoryType'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: The section, the category, or the field type doesn't exist.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              category:
+                value: { statusCode: 404, message: Category not found, error: Not Found }
+              type:
+                value: { statusCode: 404, message: Field type not found, error: Not Found }
+      '409':
+        description: Another field already uses this order value in the section.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 409
+              message: A field with this order already exists in the section
+              error: Conflict
+      '422':
+        description: type_id does not belong to category_id.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 422
+              message: Field type does not belong to category
+              error: Unprocessable Entity
+  patch:
+    tags: [Sections]
+    summary: Bulk update (and reorder) fields inside a section
+    description: >
+      There is no dedicated reorder endpoint — send the new "order" for each field id in this
+      batch. Changing a field's category_id cascades-deletes its existing options and any
+      submission answer-options for it.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [fields]
+            properties:
+              fields:
+                type: array
+                minItems: 1
+                items:
+                  $ref: '../schemas/field.yaml#/UpdateFieldItem'
+    responses:
+      '200':
+        description: Updated fields, in the order they were sent.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/field.yaml#/Field'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: The section, a category, or a field type doesn't exist.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              category:
+                value: { statusCode: 404, message: Category not found, error: Not Found }
+              type:
+                value: { statusCode: 404, message: Field type not found, error: Not Found }
+      '422':
+        description: type_id does not belong to category_id for one of the items.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 422
+              message: Field type does not belong to category
+              error: Unprocessable Entity
+
+fieldById:
+  delete:
+    tags: [Sections]
+    summary: Delete a field from a section
+    description: Cascades to the field's answer-options, submission answers, and options.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+      - $ref: '#/fieldIdParam'
+    responses:
+      '204':
+        description: Field deleted.
+      '404':
+        description: Section or field not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+
+fieldClone:
+  post:
+    tags: [Sections]
+    summary: Clone a field inside a section
+    description: >
+      Inserted right after the source (order + 1) within the same section, shifting later
+      fields down. Options are cloned too (not included in this response).
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+      - $ref: '#/fieldIdParam'
+    responses:
+      '201':
+        description: Cloned field.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/field.yaml#/Field'
+      '404':
+        description: Section or field not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+
+fieldOptions:
+  get:
+    tags: [Sections]
+    summary: List a section field's options
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+      - $ref: '#/fieldIdParam'
+    responses:
+      '200':
+        description: Options ordered by id asc (creation order).
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/field.yaml#/FieldOption'
+      '404':
+        description: Section or field not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+  post:
+    tags: [Sections]
+    summary: Add an option to a section field
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+      - $ref: '#/fieldIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/field.yaml#/CreateFieldOptionRequest'
+    responses:
+      '201':
+        description: Option created.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/field.yaml#/FieldOption'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: Section or field not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+
+fieldOptionById:
+  patch:
+    tags: [Sections]
+    summary: Update a section field's option
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+      - $ref: '#/fieldIdParam'
+      - $ref: '#/optionIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/field.yaml#/UpdateFieldOptionRequest'
+    responses:
+      '200':
+        description: Updated option.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/field.yaml#/FieldOption'
+      '400':
+        description: Validation error (no fields provided).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: Section, field, or option not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+              option:
+                value: { statusCode: 404, message: Option not found, error: Not Found }
+  delete:
+    tags: [Sections]
+    summary: Delete a section field's option
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+      - $ref: '#/fieldIdParam'
+      - $ref: '#/optionIdParam'
+    responses:
+      '204':
+        description: Option deleted.
+      '404':
+        description: Section, field, or option not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+              option:
+                value: { statusCode: 404, message: Option not found, error: Not Found }
+
+merge:
+  post:
+    tags: [Sections]
+    summary: Merge one section into another
+    description: >
+      Moves all fields from the source section into the target section (appended after the
+      target's existing fields, renumbering "order"), then deletes the now-empty source section.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - name: source_id
+        in: path
+        required: true
+        description: Section whose fields will be moved and which will be deleted.
+        schema:
+          type: integer
+      - name: target_id
+        in: path
+        required: true
+        description: Section that receives the fields.
+        schema:
+          type: integer
+    responses:
+      '201':
+        description: The target section with all fields (its own plus the merged-in ones).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/section.yaml#/SectionWithFields'
+      '404':
+        description: Source or target section not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              source:
+                value: { statusCode: 404, message: Source section not found, error: Not Found }
+              target:
+                value: { statusCode: 404, message: Target section not found, error: Not Found }
+      '422':
+        description: source_id and target_id are the same section.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 422
+              message: Source and target sections must be different
+              error: Unprocessable Entity
+
+formIdParam:
+  name: form_id
+  in: path
+  required: true
+  schema:
+    type: integer
+
+sectionIdParam:
+  name: section_id
+  in: path
+  required: true
+  schema:
+    type: integer
+
+fieldIdParam:
+  name: field_id
+  in: path
+  required: true
+  schema:
+    type: integer
+
+optionIdParam:
+  name: option_id
+  in: path
+  required: true
+  schema:
+    type: integer

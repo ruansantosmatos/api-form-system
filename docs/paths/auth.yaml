@@ -1,0 +1,365 @@
+login:
+  post:
+    tags: [Auth]
+    summary: Log in with email and password
+    description: >
+      Verifies the email/password pair and starts a new session. On success, sets the
+      access_token (15 min), refresh_token (7 days, or 90 days when remember_me is true),
+      session_id, and user cookies (all httpOnly).
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/auth.yaml#/AuthLoginRequest'
+    responses:
+      '200':
+        description: Login successful.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/auth.yaml#/AuthSessionResponse'
+      '400':
+        description: >
+          Invalid email or password. The same message is returned whether the email doesn't
+          exist, has no password auth method, or the password doesn't match, to avoid user
+          enumeration.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 400
+              message: Invalid email or password.
+              error: Bad Request
+
+register:
+  post:
+    tags: [Auth]
+    summary: Create an account with email and password
+    description: >
+      Creates a user and a password auth method, then starts a new session. On success, sets
+      the same cookies as login (refresh_token always uses the default 7-day lifetime).
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/auth.yaml#/AuthRegisterRequest'
+    responses:
+      '200':
+        description: Account created and session started.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/auth.yaml#/AuthSessionResponse'
+      '400':
+        description: The email address is already registered.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 400
+              message: Email address unavailable for use.
+              error: Bad Request
+
+logout:
+  post:
+    tags: [Auth]
+    summary: Revoke a session (log out)
+    description: Marks the given session as invalid (revocation_reason "logout"). Requires a valid access token.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/auth.yaml#/AuthLogoutRequest'
+    responses:
+      '201':
+        description: Session revoked.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/MessageResponse'
+            example:
+              message: Logged out successfully.
+      '400':
+        description: No session with that id belongs to the authenticated user.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 400
+              message: Session not found.
+              error: Bad Request
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              missing:
+                value: { statusCode: 401, message: Access token is missing., error: Unauthorized }
+              invalid:
+                value: { statusCode: 401, message: Access token is invalid or has expired., error: Unauthorized }
+      '403':
+        description: The session does not belong to the authenticated user.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: Access denied.
+              error: Forbidden
+
+refresh:
+  post:
+    tags: [Auth]
+    summary: Rotate a session's access/refresh token pair
+    description: >
+      Validates the refresh token against the stored hash and rotates both tokens. Reusing an
+      already-rotated refresh token invalidates the whole session (suspicious_token_reuse). On
+      success, sets new access_token (15 min) and refresh_token (7 days) cookies.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/auth.yaml#/AuthRefreshRequest'
+    responses:
+      '200':
+        description: Tokens rotated.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/auth.yaml#/AuthRefreshResponse'
+      '400':
+        description: No session exists with the given id.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 400
+              message: Session not found.
+              error: Bad Request
+      '401':
+        description: The refresh token doesn't match, or the session has expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              invalidToken:
+                value: { statusCode: 401, message: Invalid refresh token., error: Unauthorized }
+              sessionExpired:
+                value: { statusCode: 401, message: 'Session expired. Please log in again.', error: Unauthorized }
+
+forgotPassword:
+  post:
+    tags: [Auth]
+    summary: Request a password reset email
+    description: >
+      Always returns the same message regardless of whether the email is registered, to avoid
+      user enumeration. If the account exists, emails a reset link valid for 1 hour.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/auth.yaml#/AuthForgotPasswordRequest'
+    responses:
+      '201':
+        description: Request accepted.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/MessageResponse'
+            example:
+              message: If an account with that email exists, a password reset link has been sent.
+
+resetPassword:
+  post:
+    tags: [Auth]
+    summary: Reset password using a token from the reset email
+    description: >
+      Consumes a password reset token, sets the new password, and invalidates any other
+      pending reset tokens for the same user.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/auth.yaml#/AuthResetPasswordRequest'
+    responses:
+      '201':
+        description: Password updated.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/MessageResponse'
+            example:
+              message: Password reset successfully.
+      '400':
+        description: The token doesn't exist, was already used, or has expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 400
+              message: Invalid or expired token.
+              error: Bad Request
+
+github:
+  get:
+    tags: [Auth]
+    summary: Start GitHub OAuth login flow
+    description: >
+      Redirects the browser to GitHub's authorization page. Sets an oauth_state cookie (and
+      optionally oauth_error_redirect / oauth_redirect / oauth_remember_me) consumed by the
+      callback endpoint.
+    security: []
+    parameters:
+      - name: error_redirect
+        in: query
+        required: false
+        description: Client-side path to redirect to on failure. Must start with "/"; otherwise ignored.
+        schema:
+          type: string
+      - name: remember_me
+        in: query
+        required: false
+        description: Literal string "true" to request a 90-day refresh token on success.
+        schema:
+          type: string
+      - name: redirect
+        in: query
+        required: false
+        description: Client-side path to redirect to on success. Must start with "/"; otherwise ignored.
+        schema:
+          type: string
+    responses:
+      '302':
+        description: Redirect to GitHub's OAuth authorization page.
+
+google:
+  get:
+    tags: [Auth]
+    summary: Start Google OAuth login flow
+    description: >
+      Redirects the browser to Google's authorization page (offline access, consent prompt).
+      Sets an oauth_state cookie (and optionally oauth_error_redirect / oauth_redirect /
+      oauth_remember_me) consumed by the callback endpoint.
+    security: []
+    parameters:
+      - name: error_redirect
+        in: query
+        required: false
+        description: Client-side path to redirect to on failure. Must start with "/"; otherwise ignored.
+        schema:
+          type: string
+      - name: remember_me
+        in: query
+        required: false
+        description: Literal string "true" to request a 90-day refresh token on success.
+        schema:
+          type: string
+      - name: redirect
+        in: query
+        required: false
+        description: Client-side path to redirect to on success. Must start with "/"; otherwise ignored.
+        schema:
+          type: string
+    responses:
+      '302':
+        description: Redirect to Google's OAuth authorization page.
+
+githubCallback:
+  get:
+    tags: [Auth]
+    summary: GitHub OAuth callback
+    description: >
+      Exchanges the authorization code for a GitHub access token, resolves or creates the
+      user (matching by github provider id, then by email), and starts a session. Always
+      responds with a redirect: on success to CLIENT_URL + the redirect path from the
+      oauth_redirect cookie (default /home) with session cookies set; on failure to
+      CLIENT_URL + the error redirect path (default /login) with an ?error=... query param,
+      and no session cookies.
+    security: []
+    parameters:
+      - name: code
+        in: query
+        required: false
+        description: Authorization code issued by GitHub. Missing/invalid values are handled via an error redirect, not a 4xx response.
+        schema:
+          type: string
+      - name: state
+        in: query
+        required: false
+        description: CSRF token, must match the oauth_state cookie set by GET /auth/github.
+        schema:
+          type: string
+      - name: error
+        in: query
+        required: false
+        description: Present when GitHub itself reports an authorization error.
+        schema:
+          type: string
+    responses:
+      '302':
+        description: >
+          Redirect to the client app. On success, sets access_token, refresh_token, session_id,
+          and user cookies. On failure, redirects with ?error=oauth_invalid,
+          ?error=oauth_state_invalid, or the provider's own error code.
+
+googleCallback:
+  get:
+    tags: [Auth]
+    summary: Google OAuth callback
+    description: >
+      Exchanges the authorization code for a Google id_token, verifies it, resolves or creates
+      the user (matching by google provider id, then by email), and starts a session. Always
+      responds with a redirect: on success to CLIENT_URL + the redirect path from the
+      oauth_redirect cookie (default /home) with session cookies set; on failure to
+      CLIENT_URL + the error redirect path (default /login) with an ?error=... query param,
+      and no session cookies.
+    security: []
+    parameters:
+      - name: code
+        in: query
+        required: false
+        description: Authorization code issued by Google. Missing/invalid values are handled via an error redirect, not a 4xx response.
+        schema:
+          type: string
+      - name: state
+        in: query
+        required: false
+        description: CSRF token, must match the oauth_state cookie set by GET /auth/google.
+        schema:
+          type: string
+      - name: error
+        in: query
+        required: false
+        description: Present when Google itself reports an authorization error.
+        schema:
+          type: string
+    responses:
+      '302':
+        description: >
+          Redirect to the client app. On success, sets access_token, refresh_token, session_id,
+          and user cookies. On failure, redirects with ?error=oauth_invalid,
+          ?error=oauth_state_invalid, or the provider's own error code. Also fails with
+          ?error=... when the Google account's email is unverified.

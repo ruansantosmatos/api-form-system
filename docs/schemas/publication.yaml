@@ -1,0 +1,139 @@
+Publication:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    form_id:
+      type: integer
+    hash:
+      type: string
+      description: 64-char hex token used as the public identifier (GET /forms/publication/{hash}).
+      example: 3f9a1c2e...
+    published_at:
+      type: string
+      format: date-time
+    is_active:
+      type: boolean
+      default: true
+      description: >
+        Soft "unpublish" flag. Deactivating a publication does not delete this row or the hash —
+        the hash stays reserved, but public access starts returning 410 Gone.
+
+UpdatePublicationRequest:
+  type: object
+  properties:
+    is_active:
+      type: boolean
+
+ConfigStatus:
+  type: object
+  description: Computed submission-eligibility status, derived from the form's FormConfig.
+  properties:
+    auth_required:
+      type: boolean
+      description: '!allow_anonymous'
+    not_started:
+      type: boolean
+      description: starts_at is set and in the future.
+    expired:
+      type: boolean
+      description: expires_at is set and in the past.
+    is_open:
+      type: boolean
+      description: '!not_started && !expired'
+    max_reached:
+      type: boolean
+      description: max_responses is set and already reached.
+    accepting_responses:
+      type: boolean
+      description: is_active && is_open && !max_reached
+    single_response:
+      type: boolean
+    allow_edit_response:
+      type: boolean
+
+PublicField:
+  type: object
+  description: A field as exposed on the public, unauthenticated form view.
+  properties:
+    id:
+      type: integer
+    label:
+      type: string
+    required:
+      type: boolean
+    order:
+      type: integer
+    type:
+      type: string
+      description: FieldType.name (resolved, not the numeric type_id).
+      example: Campo Simples
+    category:
+      type: string
+      description: FieldCategory.name (resolved, not the numeric category_id).
+      example: Texto
+    options:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+          label:
+            type: string
+          value:
+            type: string
+
+PublicFormResponse:
+  type: object
+  properties:
+    publication:
+      type: object
+      properties:
+        id:
+          type: integer
+        hash:
+          type: string
+        form_id:
+          type: integer
+        published_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+        config_status:
+          $ref: '#/ConfigStatus'
+    form:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+    sections:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+          title:
+            type: string
+            nullable: true
+          description:
+            type: string
+            nullable: true
+          order:
+            type: integer
+          fields:
+            type: array
+            items:
+              $ref: '#/PublicField'
+    fields:
+      type: array
+      description: Fields attached directly to the form (not inside any section).
+      items:
+        $ref: '#/PublicField'
