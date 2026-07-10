@@ -88,3 +88,13 @@ export interface SubmissionServiceUpdateMySubmission {
   respondent_id: number
   answers: CreateSubmissionDto['answers']
 }
+
+export interface SubmissionServiceExportToEmail {
+  form_id: number
+  user_id: number
+}
+
+export interface SubmissionExportResult {
+  success: boolean
+  message: string
+}
