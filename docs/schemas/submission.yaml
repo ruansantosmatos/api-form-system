@@ -1,0 +1,158 @@
+CreateSubmissionRequest:
+  type: object
+  required: [answers]
+  properties:
+    respondent_id:
+      type: integer
+      minimum: 1
+      description: >
+        Optional and self-declared by the caller — not derived from a JWT (this endpoint is
+        public). Omit for an anonymous submission.
+    answers:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required: [field_id]
+        properties:
+          field_id:
+            type: integer
+            minimum: 1
+          value:
+            type: string
+            description: Free-text answer, for text-type fields.
+          option_ids:
+            type: array
+            minItems: 1
+            items:
+              type: integer
+              minimum: 1
+            description: Selected FormFieldOption ids, for choice-type fields.
+
+SubmissionAnswerCreated:
+  type: object
+  properties:
+    id:
+      type: integer
+    submission_id:
+      type: integer
+    field_id:
+      type: integer
+    value:
+      type: string
+      nullable: true
+    options:
+      type: array
+      items:
+        type: object
+        properties:
+          option_id:
+            type: integer
+
+SubmissionCreateResult:
+  type: object
+  description: Raw shape returned by create/update — distinct from the enriched "detail" shape.
+  properties:
+    id:
+      type: integer
+      example: 1
+    form_id:
+      type: integer
+    respondent_id:
+      type: integer
+      nullable: true
+    submitted_at:
+      type: string
+      format: date-time
+    answers:
+      type: array
+      items:
+        $ref: '#/SubmissionAnswerCreated'
+
+SubmissionExportResult:
+  type: object
+  description: Always returned with HTTP 200, even on failure — check "success".
+  properties:
+    success:
+      type: boolean
+    message:
+      type: string
+      example: 'Export sent to jane@example.com'
+
+SubmissionListItem:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    form_id:
+      type: integer
+    submitted_at:
+      type: string
+      format: date-time
+    answer_count:
+      type: integer
+    respondent:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+
+SubmissionListResponse:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/SubmissionListItem'
+    meta:
+      $ref: '../schemas/common.yaml#/PaginationMeta'
+
+SubmissionAnswerDetail:
+  type: object
+  properties:
+    id:
+      type: integer
+    field_id:
+      type: integer
+    field_label:
+      type: string
+    value:
+      type: string
+      nullable: true
+    options:
+      type: array
+      items:
+        type: object
+        properties:
+          option_id:
+            type: integer
+          label:
+            type: string
+          value:
+            type: string
+
+SubmissionDetailResult:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    form_id:
+      type: integer
+    respondent_id:
+      type: integer
+      nullable: true
+    submitted_at:
+      type: string
+      format: date-time
+    answers:
+      type: array
+      items:
+        $ref: '#/SubmissionAnswerDetail'

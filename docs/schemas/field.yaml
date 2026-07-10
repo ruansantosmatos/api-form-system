@@ -1,0 +1,183 @@
+FieldCategoryWithTypes:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    name:
+      type: string
+      example: Texto
+    fieldTypes:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            example: 1
+          name:
+            type: string
+            example: Campo Simples
+
+CreateFieldRequest:
+  type: object
+  required: [category_id, type_id, label, required, order]
+  properties:
+    category_id:
+      type: integer
+      minimum: 1
+      description: FK to FieldCategory.id.
+    type_id:
+      type: integer
+      minimum: 1
+      description: FK to FieldType.id. Must belong to category_id.
+    label:
+      type: string
+      minLength: 1
+      maxLength: 150
+      example: What is your name?
+    required:
+      type: boolean
+    order:
+      type: integer
+      minimum: 0
+
+UpdateFieldItem:
+  type: object
+  required: [id]
+  description: All properties except id are optional, but at least one of them must be provided.
+  properties:
+    id:
+      type: integer
+      minimum: 1
+    category_id:
+      type: integer
+      minimum: 1
+    type_id:
+      type: integer
+      minimum: 1
+    label:
+      type: string
+      maxLength: 150
+    required:
+      type: boolean
+    order:
+      type: integer
+      minimum: 0
+
+UpdateFieldsRequest:
+  type: object
+  required: [fields]
+  properties:
+    fields:
+      type: array
+      minItems: 1
+      items:
+        $ref: '#/UpdateFieldItem'
+
+Field:
+  type: object
+  description: >
+    A form field (question). Belongs to a form directly (form_id set, section_id null) or to a
+    section (section_id set, form_id null), never both.
+  properties:
+    id:
+      type: integer
+      example: 1
+    form_id:
+      type: integer
+      nullable: true
+    section_id:
+      type: integer
+      nullable: true
+    category_id:
+      type: integer
+    type_id:
+      type: integer
+    label:
+      type: string
+      example: What is your name?
+    required:
+      type: boolean
+      default: false
+    order:
+      type: integer
+    created_at:
+      type: string
+      format: date-time
+      nullable: true
+    updated_at:
+      type: string
+      format: date-time
+      nullable: true
+
+FieldWithCategoryType:
+  allOf:
+    - $ref: '#/Field'
+    - type: object
+      properties:
+        category:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+              example: Texto
+        type:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+              example: Campo Simples
+
+FieldOption:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    field_id:
+      type: integer
+    label:
+      type: string
+      example: Option A
+    value:
+      type: string
+      example: option_a
+    created_at:
+      type: string
+      format: date-time
+      nullable: true
+    updated_at:
+      type: string
+      format: date-time
+      nullable: true
+
+CreateFieldOptionRequest:
+  type: object
+  required: [label, value]
+  properties:
+    label:
+      type: string
+      minLength: 1
+      maxLength: 150
+      example: Option A
+    value:
+      type: string
+      minLength: 1
+      maxLength: 150
+      example: option_a
+
+UpdateFieldOptionRequest:
+  type: object
+  description: At least one property must be provided.
+  properties:
+    label:
+      type: string
+      maxLength: 150
+    value:
+      type: string
+      maxLength: 150

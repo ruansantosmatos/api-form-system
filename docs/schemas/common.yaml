@@ -1,0 +1,61 @@
+MessageResponse:
+  type: object
+  properties:
+    message:
+      type: string
+
+ErrorResponse:
+  type: object
+  description: Standard Nest exception body (NotFoundException, ForbiddenException, ConflictException, etc).
+  properties:
+    statusCode:
+      type: integer
+      example: 400
+    message:
+      oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+      example: Invalid email or password.
+    error:
+      type: string
+      example: Bad Request
+
+ValidationErrorResponse:
+  type: object
+  description: >
+    Returned when request body/query fails Zod validation (ZodValidationPipe). Unlike
+    ErrorResponse, "message" is an object keyed by field path (dot-joined), not a string.
+  properties:
+    statusCode:
+      type: integer
+      example: 400
+    message:
+      type: object
+      properties:
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            title: String must contain at least 1 character(s)
+    error:
+      type: string
+      example: Bad Request
+
+PaginationMeta:
+  type: object
+  properties:
+    total:
+      type: integer
+      example: 42
+    page:
+      type: integer
+      example: 1
+    limit:
+      type: integer
+      example: 10
+    total_pages:
+      type: integer
+      example: 5

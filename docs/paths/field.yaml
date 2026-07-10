@@ -1,0 +1,378 @@
+categories:
+  get:
+    tags: [Fields]
+    summary: List field categories and their types
+    description: >
+      Returns the category/type tree used to populate the "question type" selector
+      (e.g. category "Texto" -> types "Campo Simples", "Campo Longo").
+    security: []
+    responses:
+      '200':
+        description: Categories with nested types.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/field.yaml#/FieldCategoryWithTypes'
+
+list:
+  get:
+    tags: [Fields]
+    summary: List all fields directly on a form
+    description: >
+      Returns every FormField row for the form (order asc), including both fields nested in a
+      section and fields attached directly to the form. Does not include category/type objects.
+      Any authenticated user can read any form's fields — there is no ownership check.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '200':
+        description: Fields belonging to the form.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/field.yaml#/Field'
+      '404':
+        description: Form not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+  post:
+    tags: [Fields]
+    summary: Create a field on a form
+    description: >
+      If the form already has at least one section, the new field is attached to the most
+      recently created section (section_id set, form_id left null); otherwise it's attached
+      directly to the form (form_id set). Any authenticated user may create fields on any
+      form — there is no ownership check.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/field.yaml#/CreateFieldRequest'
+    responses:
+      '201':
+        description: Field created.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/field.yaml#/FieldWithCategoryType'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: The form, the category, or the field type doesn't exist.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              form:
+                value: { statusCode: 404, message: Form not found, error: Not Found }
+              category:
+                value: { statusCode: 404, message: Category not found, error: Not Found }
+              type:
+                value: { statusCode: 404, message: Field type not found, error: Not Found }
+      '422':
+        description: type_id does not belong to category_id.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 422
+              message: Field type does not belong to category
+              error: Unprocessable Entity
+  patch:
+    tags: [Fields]
+    summary: Bulk update (and reorder) fields on a form
+    description: >
+      There is no dedicated reorder endpoint — send the new "order" for each field id in this
+      batch. Only ids that belong to form_id are processed; unknown ids are silently skipped,
+      except that an id passing the form check but failing the underlying update still surfaces
+      as an unhandled 500. Changing a field's category_id cascades-deletes its existing options
+      and any submission answer-options for it.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/field.yaml#/UpdateFieldsRequest'
+    responses:
+      '200':
+        description: Updated fields.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/field.yaml#/Field'
+      '400':
+        description: Validation error (empty fields array, or an item with only "id" set).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: The form, a category, or a field type doesn't exist.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              form:
+                value: { statusCode: 404, message: Form not found, error: Not Found }
+              category:
+                value: { statusCode: 404, message: Category not found, error: Not Found }
+              type:
+                value: { statusCode: 404, message: Field type not found, error: Not Found }
+      '422':
+        description: type_id does not belong to category_id for one of the items.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 422
+              message: Field type does not belong to category
+              error: Unprocessable Entity
+
+byId:
+  delete:
+    tags: [Fields]
+    summary: Delete a field
+    description: Cascades to the field's answer-options, submission answers, and options.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+    responses:
+      '204':
+        description: Field deleted.
+      '404':
+        description: Field not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Field not found
+              error: Not Found
+
+clone:
+  post:
+    tags: [Fields]
+    summary: Clone a field that is attached directly to the form
+    description: >
+      Only fields with section_id = null can be cloned through this endpoint — a field that
+      lives inside a section returns 404 here even if it exists (use the section module's clone
+      route for that). The clone is inserted right after the source (order + 1), shifting later
+      fields down, and its options are copied too (the response itself does not include options).
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+    responses:
+      '201':
+        description: Cloned field.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/field.yaml#/Field'
+      '404':
+        description: No such field directly on the form (or it belongs to a section).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Field not found
+              error: Not Found
+
+options:
+  get:
+    tags: [Fields]
+    summary: List a field's options
+    description: Considers fields both attached directly to the form and nested in a section.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+    responses:
+      '200':
+        description: Options ordered by id asc (creation order).
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/field.yaml#/FieldOption'
+      '404':
+        description: Field not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Field not found
+              error: Not Found
+  post:
+    tags: [Fields]
+    summary: Add an option to a field
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/field.yaml#/CreateFieldOptionRequest'
+    responses:
+      '201':
+        description: Option created.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/field.yaml#/FieldOption'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: Field not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Field not found
+              error: Not Found
+
+optionById:
+  patch:
+    tags: [Fields]
+    summary: Update a field option
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+      - name: option_id
+        in: path
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/field.yaml#/UpdateFieldOptionRequest'
+    responses:
+      '200':
+        description: Updated option.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/field.yaml#/FieldOption'
+      '400':
+        description: Validation error (no fields provided).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: Field or option not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+              option:
+                value: { statusCode: 404, message: Option not found, error: Not Found }
+  delete:
+    tags: [Fields]
+    summary: Delete a field option
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+      - name: option_id
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      '204':
+        description: Option deleted.
+      '404':
+        description: Field or option not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+              option:
+                value: { statusCode: 404, message: Option not found, error: Not Found }
+
+formIdParam:
+  name: form_id
+  in: path
+  required: true
+  schema:
+    type: integer
+
+fieldIdParam:
+  name: field_id
+  in: path
+  required: true
+  schema:
+    type: integer

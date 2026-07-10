@@ -1,0 +1,169 @@
+Form:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    user_id:
+      type: integer
+    title:
+      type: string
+      maxLength: 100
+      example: Customer Feedback
+    description:
+      type: string
+    published:
+      type: boolean
+      default: false
+    is_favorite:
+      type: boolean
+      default: false
+    created_at:
+      type: string
+      format: date-time
+      nullable: true
+    updated_at:
+      type: string
+      format: date-time
+      nullable: true
+    last_opened_at:
+      type: string
+      format: date-time
+      nullable: true
+      description: Updated every time GET /forms/{form_id} is called.
+
+FormSummary:
+  type: object
+  description: Shape used by the paginated list endpoint. Omits user_id.
+  properties:
+    id:
+      type: integer
+      example: 1
+    title:
+      type: string
+      example: Customer Feedback
+    description:
+      type: string
+    published:
+      type: boolean
+    is_favorite:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+      nullable: true
+    updated_at:
+      type: string
+      format: date-time
+      nullable: true
+    last_opened_at:
+      type: string
+      format: date-time
+      nullable: true
+
+FormPaginatedResponse:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/FormSummary'
+    meta:
+      $ref: '../schemas/common.yaml#/PaginationMeta'
+
+CreateFormRequest:
+  type: object
+  required: [user_id, title, description]
+  description: >
+    Creates the Form and an empty FormConfig together. Note user_id is taken from the body, not
+    from the authenticated user's token.
+  properties:
+    user_id:
+      type: integer
+      minimum: 1
+    title:
+      type: string
+      minLength: 1
+      maxLength: 50
+      example: Customer Feedback
+    description:
+      type: string
+      maxLength: 200
+
+UpdateFormRequest:
+  type: object
+  description: At least one property must be provided.
+  properties:
+    title:
+      type: string
+      minLength: 1
+      maxLength: 50
+    description:
+      type: string
+      maxLength: 200
+    published:
+      type: boolean
+
+FormConfig:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    form_id:
+      type: integer
+    starts_at:
+      type: string
+      format: date-time
+      nullable: true
+    expires_at:
+      type: string
+      format: date-time
+      nullable: true
+    max_responses:
+      type: integer
+      nullable: true
+    allow_anonymous:
+      type: boolean
+      default: false
+    single_response_per_user:
+      type: boolean
+      default: false
+    allow_edit_response:
+      type: boolean
+      default: false
+
+UpdateFormConfigRequest:
+  type: object
+  description: >
+    At least one property must be provided. starts_at/expires_at may be set to null to clear
+    them, but if provided as a date they must be in the future, and expires_at must be after
+    starts_at when both are set.
+  properties:
+    starts_at:
+      type: string
+      format: date-time
+      nullable: true
+    expires_at:
+      type: string
+      format: date-time
+      nullable: true
+    max_responses:
+      type: integer
+      minimum: 1
+      nullable: true
+    allow_anonymous:
+      type: boolean
+    single_response_per_user:
+      type: boolean
+    allow_edit_response:
+      type: boolean
+
+FormFavoriteResponse:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    is_favorite:
+      type: boolean

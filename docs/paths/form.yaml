@@ -1,0 +1,333 @@
+root:
+  get:
+    tags: [Forms]
+    summary: List the authenticated user's forms
+    description: Paginated, filterable by title search, favorite/published status, sorted by title.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [asc, desc]
+          default: asc
+        description: Sort direction applied to title.
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [all, published, unpublished, favorite]
+          default: all
+    responses:
+      '200':
+        description: Paginated forms belonging to the authenticated user.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/form.yaml#/FormPaginatedResponse'
+      '400':
+        description: Invalid query parameters.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+  post:
+    tags: [Forms]
+    summary: Create a form
+    description: >
+      Creates the Form and an empty FormConfig together. Note user_id is read from the request
+      body, not derived from the JWT — the caller must supply it explicitly.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/form.yaml#/CreateFormRequest'
+    responses:
+      '201':
+        description: Form created.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/form.yaml#/Form'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+
+byId:
+  get:
+    tags: [Forms]
+    summary: Get a form by id
+    description: >
+      Side effect: always sets last_opened_at to the current time. Any authenticated user can
+      open any form by id — there is no ownership check on this endpoint.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '200':
+        description: The form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/form.yaml#/Form'
+      '404':
+        description: Form not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+  patch:
+    tags: [Forms]
+    summary: Update a form
+    description: Only the form's owner (user_id) may update it.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/form.yaml#/UpdateFormRequest'
+    responses:
+      '200':
+        description: Updated form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/form.yaml#/Form'
+      '400':
+        description: Validation error (e.g. empty body).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '403':
+        description: The authenticated user does not own this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: Form not access
+              error: Forbidden
+      '404':
+        description: Form not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+  delete:
+    tags: [Forms]
+    summary: Delete a form
+    description: >
+      Only the form's owner (user_id) may delete it. Manually cascades to the form's
+      submissions/answers/answer-options, fields, field options, sections, and publication;
+      the FormConfig row is removed by the database's own ON DELETE CASCADE.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '204':
+        description: Form deleted.
+      '403':
+        description: The authenticated user does not own this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: Form not access
+              error: Forbidden
+      '404':
+        description: Form not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+
+config:
+  get:
+    tags: [Forms]
+    summary: Get a form's configuration
+    description: >
+      Any authenticated user can read any form's config — there is no ownership check on this
+      endpoint.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '200':
+        description: The form's configuration.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/form.yaml#/FormConfig'
+      '404':
+        description: Config not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form config not found
+              error: Not Found
+  patch:
+    tags: [Forms]
+    summary: Update a form's configuration
+    description: Only the form's owner (user_id) may update its configuration.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/form.yaml#/UpdateFormConfigRequest'
+    responses:
+      '200':
+        description: Updated configuration.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/form.yaml#/FormConfig'
+      '400':
+        description: >
+          Validation error: empty body, starts_at/expires_at not in the future, or expires_at
+          not after starts_at.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+            examples:
+              empty:
+                value: { statusCode: 400, message: { errors: { '': 'At least one field must be provided' } }, error: Bad Request }
+              startsAt:
+                value: { statusCode: 400, message: { errors: { starts_at: 'starts_at must be a future date' } }, error: Bad Request }
+              expiresAt:
+                value: { statusCode: 400, message: { errors: { expires_at: 'expires_at must be a future date' } }, error: Bad Request }
+              order:
+                value: { statusCode: 400, message: { errors: { expires_at: 'expires_at must be after starts_at' } }, error: Bad Request }
+      '403':
+        description: The authenticated user does not own this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: Form not access
+              error: Forbidden
+      '404':
+        description: Form not found (the parent form, not the config, is checked here).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+
+favorite:
+  patch:
+    tags: [Forms]
+    summary: Toggle a form's favorite flag
+    description: Flips is_favorite to its opposite value. Takes no request body.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '200':
+        description: The new favorite state.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/form.yaml#/FormFavoriteResponse'
+      '403':
+        description: The authenticated user does not own this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: Form not access
+              error: Forbidden
+      '404':
+        description: Form not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+
+formIdParam:
+  name: form_id
+  in: path
+  required: true
+  schema:
+    type: integer
