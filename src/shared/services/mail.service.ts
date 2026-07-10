@@ -17,7 +17,7 @@ export class MailService {
     this.from = from
   }
 
-  async send({ to, subject, html, template }: SendMailInput): Promise<SendMailResult> {
+  async send({ to, subject, html, template, attachments }: SendMailInput): Promise<SendMailResult> {
     if (!html && !template) throw new Error('Either "html" or "template" must be provided.')
 
     const { data, error } = await this.resend.emails.send({
@@ -25,6 +25,7 @@ export class MailService {
       to,
       subject,
       ...(template ? { template: { id: template.id, variables: template.variables } } : { html: html! }),
+      ...(attachments?.length ? { attachments } : {}),
     })
 
     if (error) throw new Error(error.message)

@@ -6,7 +6,12 @@ import { CurrentUser } from 'src/shared/decorators/current-user.decorator'
 import { Controller, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common'
 import { createSubmissionSchema, type CreateSubmissionDto } from './dto/create-submission.dto'
 import { getAllSubmissionsSchema, type GetAllSubmissionsDto } from './dto/get-all-submissions.dto'
-import { type SubmissionCreateResult, type SubmissionDetailResult, type SubmissionListResult } from './interface/submission.interface'
+import {
+  type SubmissionCreateResult,
+  type SubmissionDetailResult,
+  type SubmissionListResult,
+  type SubmissionExportResult,
+} from './interface/submission.interface'
 
 @Controller('forms')
 export class SubmissionController {
@@ -18,6 +23,12 @@ export class SubmissionController {
     @ZodBody(createSubmissionSchema) body: CreateSubmissionDto,
   ): Promise<SubmissionCreateResult> {
     return this.submissionService.create({ form_id, respondent_id: body.respondent_id ?? null, answers: body.answers })
+  }
+
+  @Post(':form_id/submissions/export')
+  @UseGuards(JwtAuthGuard)
+  async exportToEmail(@Param('form_id', ParseIntPipe) form_id: number, @CurrentUser() user_id: number): Promise<SubmissionExportResult> {
+    return this.submissionService.exportToEmail({ form_id, user_id })
   }
 
   @Get(':form_id/submissions')
