@@ -19,6 +19,13 @@ RUN npx prisma generate
 
 RUN npm run build
 
+# ---- Migration stage ----
+# Reuses the builder stage as-is: it already has devDependencies (including
+# the prisma CLI, which the slimmed-down runtime image below deliberately
+# omits), the schema, migrations, and prisma.config.ts.
+FROM builder AS migrator
+CMD ["npx", "prisma", "migrate", "deploy"]
+
 # ---- Production dependencies stage ----
 FROM base AS prod-deps
 COPY package.json package-lock.json ./
