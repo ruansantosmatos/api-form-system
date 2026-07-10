@@ -242,7 +242,7 @@ export class AuthService {
 
     await this.mailService.send({
       to: user.email,
-      subject: 'Reset your password',
+      subject: 'Alteração de senha',
       template: {
         id: 'password-reset-1',
         variables: {
