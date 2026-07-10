@@ -5,14 +5,7 @@ import { PrismaClient } from '../../generated/prisma/client'
 @Injectable()
 export class PrismaClientService extends PrismaClient {
   constructor() {
-    const adapter = new PrismaMariaDb({
-      host: process.env.DATABASE_HOST,
-      user: process.env.DATABASE_USER,
-      database: process.env.DATABASE_NAME,
-      password: process.env.DATABASE_PASSWORD,
-      port: parseInt(process.env.PORT_DATABASE || '3306'),
-      connectionLimit: 5,
-    })
+    const adapter = new PrismaMariaDb(process.env.DATABASE_URL as string)
     super({ adapter })
   }
 }
