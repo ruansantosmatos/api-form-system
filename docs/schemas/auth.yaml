@@ -1,0 +1,120 @@
+AuthLoginRequest:
+  type: object
+  required: [email, password]
+  properties:
+    email:
+      type: string
+      format: email
+      example: jane@example.com
+    password:
+      type: string
+      format: password
+      minLength: 6
+      example: secret123
+    remember_me:
+      type: boolean
+      default: false
+      description: When true, the refresh_token cookie is issued with a 90-day lifetime instead of the default 7 days.
+
+AuthRegisterRequest:
+  type: object
+  required: [email, name, password]
+  properties:
+    email:
+      type: string
+      format: email
+      example: jane@example.com
+    name:
+      type: string
+      minLength: 5
+      example: Jane Doe
+    password:
+      type: string
+      format: password
+      minLength: 6
+      example: secret123
+
+AuthLogoutRequest:
+  type: object
+  required: [session_id]
+  properties:
+    session_id:
+      type: integer
+      minimum: 1
+      example: 42
+
+AuthRefreshRequest:
+  type: object
+  required: [session_id, refresh_token]
+  properties:
+    session_id:
+      type: integer
+      minimum: 1
+      example: 42
+    refresh_token:
+      type: string
+      description: Refresh token previously issued via the refresh_token cookie. Sent in the body — the cookie is not read by this endpoint.
+
+AuthForgotPasswordRequest:
+  type: object
+  required: [email]
+  properties:
+    email:
+      type: string
+      format: email
+      example: jane@example.com
+
+AuthResetPasswordRequest:
+  type: object
+  required: [token, password]
+  properties:
+    token:
+      type: string
+      minLength: 1
+      description: Raw token received in the password reset email link.
+    password:
+      type: string
+      format: password
+      minLength: 6
+      example: newSecret123
+
+AuthUser:
+  type: object
+  properties:
+    id:
+      type: integer
+      example: 1
+    name:
+      type: string
+      example: Jane Doe
+    email:
+      type: string
+      format: email
+      example: jane@example.com
+
+AuthSessionRef:
+  type: object
+  properties:
+    session_id:
+      type: integer
+      example: 42
+
+AuthSessionResponse:
+  type: object
+  description: >
+    Returned by login and register. The access_token, refresh_token, session_id and user
+    cookies are set as httpOnly cookies on the response; tokens are never included in the body.
+  properties:
+    session:
+      $ref: '#/AuthSessionRef'
+    user:
+      $ref: '#/AuthUser'
+
+AuthRefreshResponse:
+  type: object
+  description: >
+    Returned by the refresh endpoint. A new access/refresh token pair is issued and set as
+    httpOnly cookies (access_token, refresh_token); tokens are never included in the body.
+  properties:
+    session:
+      $ref: '#/AuthSessionRef'

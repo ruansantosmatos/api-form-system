@@ -1,0 +1,217 @@
+openapi: 3.0.3
+
+info:
+  title: FormSystem API
+  description: API for building forms, publishing them, and collecting/exporting responses.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Registration, login, session refresh, OAuth, password recovery
+  - name: Forms
+    description: Form CRUD, config, and favorites
+  - name: Sections
+    description: Form sections
+  - name: Fields
+    description: Form fields (questions) and their options
+  - name: Submissions
+    description: Form responses and CSV export
+  - name: Publication
+    description: Public-facing published form access
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Send as "Authorization: Bearer <token>".'
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: Set automatically on login/refresh; used when no Authorization header is present.
+
+  schemas:
+    AuthLoginRequest:
+      $ref: './schemas/auth.yaml#/AuthLoginRequest'
+    AuthRegisterRequest:
+      $ref: './schemas/auth.yaml#/AuthRegisterRequest'
+    AuthLogoutRequest:
+      $ref: './schemas/auth.yaml#/AuthLogoutRequest'
+    AuthRefreshRequest:
+      $ref: './schemas/auth.yaml#/AuthRefreshRequest'
+    AuthForgotPasswordRequest:
+      $ref: './schemas/auth.yaml#/AuthForgotPasswordRequest'
+    AuthResetPasswordRequest:
+      $ref: './schemas/auth.yaml#/AuthResetPasswordRequest'
+    AuthUser:
+      $ref: './schemas/auth.yaml#/AuthUser'
+    AuthSessionRef:
+      $ref: './schemas/auth.yaml#/AuthSessionRef'
+    AuthSessionResponse:
+      $ref: './schemas/auth.yaml#/AuthSessionResponse'
+    AuthRefreshResponse:
+      $ref: './schemas/auth.yaml#/AuthRefreshResponse'
+    MessageResponse:
+      $ref: './schemas/common.yaml#/MessageResponse'
+    ErrorResponse:
+      $ref: './schemas/common.yaml#/ErrorResponse'
+    ValidationErrorResponse:
+      $ref: './schemas/common.yaml#/ValidationErrorResponse'
+    PaginationMeta:
+      $ref: './schemas/common.yaml#/PaginationMeta'
+
+    Form:
+      $ref: './schemas/form.yaml#/Form'
+    FormSummary:
+      $ref: './schemas/form.yaml#/FormSummary'
+    FormPaginatedResponse:
+      $ref: './schemas/form.yaml#/FormPaginatedResponse'
+    CreateFormRequest:
+      $ref: './schemas/form.yaml#/CreateFormRequest'
+    UpdateFormRequest:
+      $ref: './schemas/form.yaml#/UpdateFormRequest'
+    FormConfig:
+      $ref: './schemas/form.yaml#/FormConfig'
+    UpdateFormConfigRequest:
+      $ref: './schemas/form.yaml#/UpdateFormConfigRequest'
+    FormFavoriteResponse:
+      $ref: './schemas/form.yaml#/FormFavoriteResponse'
+
+    Section:
+      $ref: './schemas/section.yaml#/Section'
+    SectionWithFields:
+      $ref: './schemas/section.yaml#/SectionWithFields'
+    CreateSectionRequest:
+      $ref: './schemas/section.yaml#/CreateSectionRequest'
+    UpdateSectionItem:
+      $ref: './schemas/section.yaml#/UpdateSectionItem'
+    UpdateSectionsRequest:
+      $ref: './schemas/section.yaml#/UpdateSectionsRequest'
+
+    FieldCategoryWithTypes:
+      $ref: './schemas/field.yaml#/FieldCategoryWithTypes'
+    CreateFieldRequest:
+      $ref: './schemas/field.yaml#/CreateFieldRequest'
+    UpdateFieldItem:
+      $ref: './schemas/field.yaml#/UpdateFieldItem'
+    UpdateFieldsRequest:
+      $ref: './schemas/field.yaml#/UpdateFieldsRequest'
+    Field:
+      $ref: './schemas/field.yaml#/Field'
+    FieldWithCategoryType:
+      $ref: './schemas/field.yaml#/FieldWithCategoryType'
+    FieldOption:
+      $ref: './schemas/field.yaml#/FieldOption'
+    CreateFieldOptionRequest:
+      $ref: './schemas/field.yaml#/CreateFieldOptionRequest'
+    UpdateFieldOptionRequest:
+      $ref: './schemas/field.yaml#/UpdateFieldOptionRequest'
+
+    CreateSubmissionRequest:
+      $ref: './schemas/submission.yaml#/CreateSubmissionRequest'
+    SubmissionCreateResult:
+      $ref: './schemas/submission.yaml#/SubmissionCreateResult'
+    SubmissionExportResult:
+      $ref: './schemas/submission.yaml#/SubmissionExportResult'
+    SubmissionListResponse:
+      $ref: './schemas/submission.yaml#/SubmissionListResponse'
+    SubmissionDetailResult:
+      $ref: './schemas/submission.yaml#/SubmissionDetailResult'
+
+    Publication:
+      $ref: './schemas/publication.yaml#/Publication'
+    UpdatePublicationRequest:
+      $ref: './schemas/publication.yaml#/UpdatePublicationRequest'
+    ConfigStatus:
+      $ref: './schemas/publication.yaml#/ConfigStatus'
+    PublicField:
+      $ref: './schemas/publication.yaml#/PublicField'
+    PublicFormResponse:
+      $ref: './schemas/publication.yaml#/PublicFormResponse'
+
+paths:
+  /auth/login:
+    $ref: './paths/auth.yaml#/login'
+  /auth/register:
+    $ref: './paths/auth.yaml#/register'
+  /auth/logout:
+    $ref: './paths/auth.yaml#/logout'
+  /auth/refresh:
+    $ref: './paths/auth.yaml#/refresh'
+  /auth/forgot-password:
+    $ref: './paths/auth.yaml#/forgotPassword'
+  /auth/reset-password:
+    $ref: './paths/auth.yaml#/resetPassword'
+  /auth/github:
+    $ref: './paths/auth.yaml#/github'
+  /auth/google:
+    $ref: './paths/auth.yaml#/google'
+  /auth/github/callback:
+    $ref: './paths/auth.yaml#/githubCallback'
+  /auth/google/callback:
+    $ref: './paths/auth.yaml#/googleCallback'
+
+  /forms:
+    $ref: './paths/form.yaml#/root'
+  /forms/{form_id}:
+    $ref: './paths/form.yaml#/byId'
+  /forms/{form_id}/config:
+    $ref: './paths/form.yaml#/config'
+  /forms/{form_id}/favorite:
+    $ref: './paths/form.yaml#/favorite'
+
+  /forms/fields/categories/types:
+    $ref: './paths/field.yaml#/categories'
+  /forms/{form_id}/fields:
+    $ref: './paths/field.yaml#/list'
+  /forms/{form_id}/fields/{field_id}:
+    $ref: './paths/field.yaml#/byId'
+  /forms/{form_id}/fields/{field_id}/clone:
+    $ref: './paths/field.yaml#/clone'
+  /forms/{form_id}/fields/{field_id}/options:
+    $ref: './paths/field.yaml#/options'
+  /forms/{form_id}/fields/{field_id}/options/{option_id}:
+    $ref: './paths/field.yaml#/optionById'
+
+  /forms/{form_id}/sections:
+    $ref: './paths/section.yaml#/list'
+  /forms/{form_id}/sections/{section_id}:
+    $ref: './paths/section.yaml#/byId'
+  /forms/{form_id}/sections/{section_id}/clone:
+    $ref: './paths/section.yaml#/clone'
+  /forms/{form_id}/sections/{section_id}/fields:
+    $ref: './paths/section.yaml#/fields'
+  /forms/{form_id}/sections/{section_id}/fields/{field_id}:
+    $ref: './paths/section.yaml#/fieldById'
+  /forms/{form_id}/sections/{section_id}/fields/{field_id}/clone:
+    $ref: './paths/section.yaml#/fieldClone'
+  /forms/{form_id}/sections/{section_id}/fields/{field_id}/options:
+    $ref: './paths/section.yaml#/fieldOptions'
+  /forms/{form_id}/sections/{section_id}/fields/{field_id}/options/{option_id}:
+    $ref: './paths/section.yaml#/fieldOptionById'
+  /forms/{form_id}/sections/{source_id}/merge/{target_id}:
+    $ref: './paths/section.yaml#/merge'
+
+  /forms/{form_id}/submissions:
+    $ref: './paths/submission.yaml#/list'
+  /forms/{form_id}/submissions/export:
+    $ref: './paths/submission.yaml#/export'
+  /forms/{form_id}/submissions/me:
+    $ref: './paths/submission.yaml#/me'
+  /forms/{form_id}/submissions/{submission_id}:
+    $ref: './paths/submission.yaml#/byId'
+
+  /forms/publication/{hash}:
+    $ref: './paths/publication.yaml#/byHash'
+  /forms/{form_id}/publication:
+    $ref: './paths/publication.yaml#/byFormId'

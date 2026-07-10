@@ -1,0 +1,339 @@
+list:
+  post:
+    tags: [Submissions]
+    summary: Submit answers to a published form
+    description: >
+      Fully public endpoint — no authentication. respondent_id, if provided, is trusted as-is
+      from the body (not verified against a real logged-in user). Enforces the form's
+      FormConfig rules (published, open window, max responses, anonymous allowed,
+      single-response-per-user) and validates that every field_id/option_id belongs to the form.
+    security: []
+    parameters:
+      - $ref: '#/formIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/submission.yaml#/CreateSubmissionRequest'
+    responses:
+      '201':
+        description: Submission created.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/submission.yaml#/SubmissionCreateResult'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '403':
+        description: The form requires a respondent_id (anonymous submissions are disabled).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: This form does not allow anonymous submissions
+              error: Forbidden
+      '404':
+        description: Form not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+      '422':
+        description: >
+          The form isn't published, isn't open yet, has closed, has reached its response limit,
+          the respondent already submitted (single-response mode), an answer references a field
+          or option that doesn't belong to this form, or the same field was answered twice.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              notPublished:
+                value: { statusCode: 422, message: Form is not published, error: Unprocessable Entity }
+              notStarted:
+                value: { statusCode: 422, message: This form is not yet open for submissions, error: Unprocessable Entity }
+              expired:
+                value: { statusCode: 422, message: This form is no longer accepting submissions, error: Unprocessable Entity }
+              maxReached:
+                value: { statusCode: 422, message: This form has reached the maximum number of responses, error: Unprocessable Entity }
+              alreadySubmitted:
+                value: { statusCode: 422, message: You have already submitted this form, error: Unprocessable Entity }
+              invalidField:
+                value: { statusCode: 422, message: 'Field 7 does not belong to this form', error: Unprocessable Entity }
+              duplicateField:
+                value: { statusCode: 422, message: 'Duplicate answer for field 7', error: Unprocessable Entity }
+              invalidOption:
+                value: { statusCode: 422, message: 'Option 3 does not belong to field 7', error: Unprocessable Entity }
+  get:
+    tags: [Submissions]
+    summary: List a form's submissions
+    description: Owner-only. Paginated, sorted by submitted_at.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [asc, desc]
+          default: desc
+        description: Sort direction applied to submitted_at.
+    responses:
+      '200':
+        description: Paginated submissions.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/submission.yaml#/SubmissionListResponse'
+      '400':
+        description: Invalid query parameters.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '403':
+        description: The authenticated user does not own this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: Forbidden
+              error: Forbidden
+      '404':
+        description: Form not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+
+export:
+  post:
+    tags: [Submissions]
+    summary: Email a CSV export of a form's submissions to its owner
+    description: >
+      Never streams/downloads a file — always responds 200 with a JSON status, and emails the
+      CSV as an attachment to the authenticated owner's own address. Mail/CSV failures are
+      caught internally and reported as success:false rather than an HTTP error.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '200':
+        description: Export outcome (check "success"; this is 200 even on failure).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/submission.yaml#/SubmissionExportResult'
+            examples:
+              sent:
+                value: { success: true, message: 'Export sent to jane@example.com' }
+              empty:
+                value: { success: false, message: 'This form has no submissions to export' }
+              failed:
+                value: { success: false, message: 'Failed to export submissions' }
+      '403':
+        description: The authenticated user does not own this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: Forbidden
+              error: Forbidden
+      '404':
+        description: Form not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Form not found
+              error: Not Found
+
+me:
+  get:
+    tags: [Submissions]
+    summary: Get the authenticated user's own submission to a form
+    description: The authenticated user's id is matched against the submission's respondent_id.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+    responses:
+      '200':
+        description: The caller's submission.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/submission.yaml#/SubmissionDetailResult'
+      '404':
+        description: No submission by this user exists for this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Submission not found
+              error: Not Found
+
+byId:
+  get:
+    tags: [Submissions]
+    summary: Get one submission by id
+    description: Owner-only.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/submissionIdParam'
+    responses:
+      '200':
+        description: The submission.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/submission.yaml#/SubmissionDetailResult'
+      '403':
+        description: The authenticated user does not own this form.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 403
+              message: Forbidden
+              error: Forbidden
+      '404':
+        description: Form or submission not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              form:
+                value: { statusCode: 404, message: Form not found, error: Not Found }
+              submission:
+                value: { statusCode: 404, message: Submission not found, error: Not Found }
+  patch:
+    tags: [Submissions]
+    summary: Update the authenticated user's own submission
+    description: >
+      Only allowed when the form's FormConfig.allow_edit_response is true, and only for the
+      submission's own respondent (matched against the JWT). This is a merge, not a full
+      replace — fields present in the existing submission but omitted from "answers" are left
+      untouched.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/submissionIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/submission.yaml#/CreateSubmissionRequest'
+    responses:
+      '200':
+        description: Updated submission.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/submission.yaml#/SubmissionDetailResult'
+      '400':
+        description: Validation error.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '403':
+        description: Editing is disabled for this form, or the submission belongs to someone else.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              editingDisabled:
+                value: { statusCode: 403, message: This form does not allow editing responses, error: Forbidden }
+              notOwner:
+                value: { statusCode: 403, message: Forbidden, error: Forbidden }
+      '404':
+        description: Submission not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Submission not found
+              error: Not Found
+      '422':
+        description: An answer references a field or option that doesn't belong to this form, or the same field was answered twice.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              invalidField:
+                value: { statusCode: 422, message: 'Field 7 does not belong to this form', error: Unprocessable Entity }
+              duplicateField:
+                value: { statusCode: 422, message: 'Duplicate answer for field 7', error: Unprocessable Entity }
+              invalidOption:
+                value: { statusCode: 422, message: 'Option 3 does not belong to field 7', error: Unprocessable Entity }
+
+formIdParam:
+  name: form_id
+  in: path
+  required: true
+  schema:
+    type: integer
+
+submissionIdParam:
+  name: submission_id
+  in: path
+  required: true
+  schema:
+    type: integer
