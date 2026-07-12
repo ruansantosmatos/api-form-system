@@ -19,13 +19,6 @@ RUN npx prisma generate
 
 RUN npm run build
 
-# ---- Migration stage ----
-# Reuses the builder stage as-is: it already has devDependencies (including
-# the prisma CLI, which the slimmed-down runtime image below deliberately
-# omits), the schema, migrations, and prisma.config.ts.
-FROM builder AS migrator
-CMD ["npx", "prisma", "migrate", "deploy"]
-
 # ---- Production dependencies stage ----
 FROM base AS prod-deps
 COPY package.json package-lock.json ./
@@ -34,7 +27,7 @@ RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 # ---- Runtime stage ----
 FROM base AS runner
 ENV NODE_ENV=production
- 
+
 RUN apk add --no-cache dumb-init && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
@@ -42,13 +35,21 @@ RUN apk add --no-cache dumb-init && \
 COPY --from=prod-deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
+# schema + migrations dentro do container
+COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
 COPY --chown=nestjs:nodejs package.json ./
 COPY --chown=nestjs:nodejs docs ./docs
 
 USER nestjs
 
-EXPOSE 3000
+EXPOSE 3001
 
 ENTRYPOINT ["dumb-init", "--"]
 
-CMD ["node", "dist/src/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]
