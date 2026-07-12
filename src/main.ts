@@ -17,7 +17,7 @@ async function bootstrap() {
   app.use(cookieParser())
 
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiDocument))
-  await app.listen(process.env.PORT ?? 3000)
+  await app.listen(process.env.PORT as string)
 }
 
 bootstrap()
