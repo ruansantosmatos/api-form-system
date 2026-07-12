@@ -19,11 +19,6 @@ RUN npx prisma generate
 
 RUN npm run build
 
-# ---- Production dependencies stage ----
-FROM base AS prod-deps
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --omit=optional && npm cache clean --force
-
 # ---- Runtime stage ----
 FROM base AS runner
 ENV NODE_ENV=production
@@ -32,17 +27,10 @@ RUN apk add --no-cache dumb-init && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
 
-COPY --from=prod-deps --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-
-# schema + migrations dentro do container
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
-
+COPY --chown=nestjs:nodejs prisma.config.ts ./
 COPY --chown=nestjs:nodejs package.json ./
 COPY --chown=nestjs:nodejs docs ./docs
 
