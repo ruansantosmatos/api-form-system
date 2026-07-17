@@ -30,7 +30,9 @@ RUN apk add --no-cache dumb-init && \
 COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nestjs:nodejs /app/src/generated ./src/generated
 COPY --chown=nestjs:nodejs prisma.config.ts ./
+COPY --chown=nestjs:nodejs tsconfig.json ./
 COPY --chown=nestjs:nodejs package.json ./
 COPY --chown=nestjs:nodejs docs ./docs
 
