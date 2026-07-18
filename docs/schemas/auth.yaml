@@ -102,13 +102,12 @@ AuthSessionRef:
 AuthSessionResponse:
   type: object
   description: >
-    Returned by login and register. The access_token, refresh_token, session_id and user
-    cookies are set as httpOnly cookies on the response; tokens are never included in the body.
+    Returned by login and register. The access_token, refresh_token, and session_id cookies
+    are set as httpOnly cookies on the response; tokens are never included in the body. No
+    user data is returned here — call GET /auth/me to fetch the current user.
   properties:
     session:
       $ref: '#/AuthSessionRef'
-    user:
-      $ref: '#/AuthUser'
 
 AuthRefreshResponse:
   type: object
@@ -118,3 +117,12 @@ AuthRefreshResponse:
   properties:
     session:
       $ref: '#/AuthSessionRef'
+
+AuthMeResponse:
+  type: object
+  description: >
+    Returned by GET /auth/me. Re-issues the httpOnly user cookie with the current database
+    values; no access/refresh tokens are touched by this endpoint.
+  properties:
+    user:
+      $ref: '#/AuthUser'
