@@ -25,6 +25,7 @@ import {
   AuthServiceResetPassword,
   AuthForgotPasswordResult,
   AuthResetPasswordResult,
+  AuthMeResult,
 } from './interface/auth.interface'
 
 @Injectable()
@@ -47,6 +48,16 @@ export class AuthService {
   redirectToGoogle(): AuthOAuthRedirectResult {
     const response = this.googleAuthService.buildGoogleAuthorizationUrl()
     return response
+  }
+
+  async me(user_id: number): Promise<AuthMeResult> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: user_id },
+      select: { id: true, name: true, email: true },
+    })
+
+    if (!user) throw new UnauthorizedException('Access token is invalid or has expired.')
+    return { user }
   }
 
   async logout({ session_id, user_id }: AuthServiceLogout): Promise<AuthLogoutResult> {

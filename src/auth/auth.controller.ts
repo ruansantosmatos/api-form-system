@@ -25,6 +25,17 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async me(@Res() res: Response, @CurrentUser() user_id: number) {
+    const cookieOptions = getCookieOptions()
+    const { user } = await this.authService.me(user_id)
+
+    res.cookie('user', JSON.stringify(user), cookieOptions)
+    res.setHeader('Cache-Control', 'no-store')
+    res.status(200).json({ user })
+  }
+
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   logout(@ZodBody(authLogoutSchema) body: AuthLogoutDto, @CurrentUser() user_id: number) {
@@ -70,28 +81,26 @@ export class AuthController {
   @Post('login')
   async login(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(authLoginSchema) body: AuthLoginDto) {
     const cookieOptions = getCookieOptions()
-    const { session_id, access_token, refresh_token, user } = await this.authService.login({ client, data: body })
+    const { session_id, access_token, refresh_token } = await this.authService.login({ client, data: body })
     const refreshMaxAge = body.remember_me ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
     res.cookie('session_id', session_id, cookieOptions)
-    res.cookie('user', JSON.stringify(user), cookieOptions)
-    res.status(200).json({ session: { session_id }, user })
+    res.status(200).json({ session: { session_id } })
   }
 
   @Post('register')
   async register(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(createRegisterSchema) body: CreateRegisterDto) {
     const cookieOptions = getCookieOptions()
-    const { session_id, access_token, refresh_token, user } = await this.authService.register({ client, data: body })
+    const { session_id, access_token, refresh_token } = await this.authService.register({ client, data: body })
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT })
 
     res.cookie('session_id', session_id, cookieOptions)
-    res.cookie('user', JSON.stringify(user), cookieOptions)
-    res.status(200).json({ session: { session_id }, user })
+    res.status(200).json({ session: { session_id } })
   }
 
   @Post('forgot-password')
@@ -122,7 +131,7 @@ export class AuthController {
     const rememberMe = req.cookies['oauth_remember_me'] === 'true'
     const redirect: string = req.cookies['oauth_redirect'] ?? '/home'
 
-    const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGithub({ code, client, rememberMe })
+    const { session_id, access_token, refresh_token } = await this.authService.authenticateWithGithub({ code, client, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
     res.clearCookie('oauth_redirect', cookieOptions)
@@ -132,7 +141,6 @@ export class AuthController {
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
     res.cookie('session_id', session_id, cookieOptions)
-    res.cookie('user', JSON.stringify(user), cookieOptions)
     res.redirect(`${clientUrl}${redirect}`)
   }
 
@@ -145,7 +153,7 @@ export class AuthController {
     const rememberMe = req.cookies['oauth_remember_me'] === 'true'
     const redirect: string = req.cookies['oauth_redirect'] ?? '/home'
 
-    const { session_id, access_token, refresh_token, user } = await this.authService.authenticateWithGoogle({ client, code, rememberMe })
+    const { session_id, access_token, refresh_token } = await this.authService.authenticateWithGoogle({ client, code, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
     res.clearCookie('oauth_redirect', cookieOptions)
@@ -155,7 +163,6 @@ export class AuthController {
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
 
     res.cookie('session_id', session_id, cookieOptions)
-    res.cookie('user', JSON.stringify(user), cookieOptions)
     res.redirect(`${clientUrl}${redirect}`)
   }
 }

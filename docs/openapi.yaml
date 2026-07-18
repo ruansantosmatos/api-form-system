@@ -8,6 +8,8 @@ info:
 servers:
   - url: http://localhost:3001
     description: Local development
+    # The production server URL is injected at boot time (see src/main.ts) from the
+    # API_URL environment variable and prepended to this list.
 
 tags:
   - name: Auth
@@ -61,6 +63,8 @@ components:
       $ref: './schemas/auth.yaml#/AuthSessionResponse'
     AuthRefreshResponse:
       $ref: './schemas/auth.yaml#/AuthRefreshResponse'
+    AuthMeResponse:
+      $ref: './schemas/auth.yaml#/AuthMeResponse'
     MessageResponse:
       $ref: './schemas/common.yaml#/MessageResponse'
     ErrorResponse:
@@ -144,6 +148,8 @@ paths:
     $ref: './paths/auth.yaml#/login'
   /auth/register:
     $ref: './paths/auth.yaml#/register'
+  /auth/me:
+    $ref: './paths/auth.yaml#/me'
   /auth/logout:
     $ref: './paths/auth.yaml#/logout'
   /auth/refresh:
