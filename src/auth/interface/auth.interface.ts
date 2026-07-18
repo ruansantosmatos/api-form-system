@@ -46,6 +46,8 @@ export type AuthServiceSignUp = {
   data: AuthRegisterData
 }
 
+export type AuthMeResult = { user: { id: number; name: string; email: string } }
+
 export type AuthForgotPasswordResult = { message: string }
 
 export type AuthResetPasswordResult = { message: string }

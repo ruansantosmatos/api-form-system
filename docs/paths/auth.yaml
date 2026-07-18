@@ -4,8 +4,9 @@ login:
     summary: Log in with email and password
     description: >
       Verifies the email/password pair and starts a new session. On success, sets the
-      access_token (15 min), refresh_token (7 days, or 90 days when remember_me is true),
-      session_id, and user cookies (all httpOnly).
+      access_token (15 min), refresh_token (7 days, or 90 days when remember_me is true), and
+      session_id cookies (all httpOnly). No user data is returned in the body — call
+      GET /auth/me to fetch the current user.
     security: []
     requestBody:
       required: true
@@ -40,7 +41,8 @@ register:
     summary: Create an account with email and password
     description: >
       Creates a user and a password auth method, then starts a new session. On success, sets
-      the same cookies as login (refresh_token always uses the default 7-day lifetime).
+      the same cookies as login (refresh_token always uses the default 7-day lifetime). No
+      user data is returned in the body — call GET /auth/me to fetch the current user.
     security: []
     requestBody:
       required: true
@@ -65,6 +67,37 @@ register:
               statusCode: 400
               message: Email address unavailable for use.
               error: Bad Request
+
+me:
+  get:
+    tags: [Auth]
+    summary: Get the currently authenticated user
+    description: >
+      Resolves the user from the verified access token (never from client input, to prevent
+      IDOR) and returns their current id/name/email. Re-issues the httpOnly user cookie with
+      fresh values and sends Cache-Control: no-store, since the response carries PII. Does not
+      issue or rotate access_token/refresh_token — use POST /auth/refresh for that.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '200':
+        description: Current user data.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/auth.yaml#/AuthMeResponse'
+      '401':
+        description: Access token is missing, invalid, expired, or no longer belongs to an existing user.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              missing:
+                value: { statusCode: 401, message: Access token is missing., error: Unauthorized }
+              invalid:
+                value: { statusCode: 401, message: Access token is invalid or has expired., error: Unauthorized }
 
 logout:
   post:
@@ -297,7 +330,8 @@ githubCallback:
       responds with a redirect: on success to CLIENT_URL + the redirect path from the
       oauth_redirect cookie (default /home) with session cookies set; on failure to
       CLIENT_URL + the error redirect path (default /login) with an ?error=... query param,
-      and no session cookies.
+      and no session cookies. No user object is returned (this is a redirect, not JSON) — the
+      client should call GET /auth/me after landing to fetch the current user.
     security: []
     parameters:
       - name: code
@@ -321,8 +355,8 @@ githubCallback:
     responses:
       '302':
         description: >
-          Redirect to the client app. On success, sets access_token, refresh_token, session_id,
-          and user cookies. On failure, redirects with ?error=oauth_invalid,
+          Redirect to the client app. On success, sets access_token, refresh_token, and
+          session_id cookies. On failure, redirects with ?error=oauth_invalid,
           ?error=oauth_state_invalid, or the provider's own error code.
 
 googleCallback:
@@ -335,7 +369,8 @@ googleCallback:
       responds with a redirect: on success to CLIENT_URL + the redirect path from the
       oauth_redirect cookie (default /home) with session cookies set; on failure to
       CLIENT_URL + the error redirect path (default /login) with an ?error=... query param,
-      and no session cookies.
+      and no session cookies. No user object is returned (this is a redirect, not JSON) — the
+      client should call GET /auth/me after landing to fetch the current user.
     security: []
     parameters:
       - name: code
@@ -359,7 +394,7 @@ googleCallback:
     responses:
       '302':
         description: >
-          Redirect to the client app. On success, sets access_token, refresh_token, session_id,
-          and user cookies. On failure, redirects with ?error=oauth_invalid,
+          Redirect to the client app. On success, sets access_token, refresh_token, and
+          session_id cookies. On failure, redirects with ?error=oauth_invalid,
           ?error=oauth_state_invalid, or the provider's own error code. Also fails with
           ?error=... when the Google account's email is unverified.
