@@ -122,8 +122,24 @@ model FormSection {
   updated_at  DateTime?
   form        Form        @relation(fields: [form_id], references: [id])
   fields      FormField[]
+  image       Image?
 
   @@map("form_sections")
+}
+
+model Image {
+  id         Int          @id @default(autoincrement())
+  field_id   Int?         @unique
+  section_id Int?         @unique
+  key        String       @unique @db.VarChar(512)
+  mime_type  String       @db.VarChar(100)
+  size       Int
+  created_at DateTime?    @default(now())
+  updated_at DateTime?
+  field      FormField?   @relation(fields: [field_id], references: [id])
+  section    FormSection? @relation(fields: [section_id], references: [id])
+
+  @@map("images")
 }
 
 model FieldCategory {
@@ -168,6 +184,7 @@ model FormField {
   type     FieldType     @relation(fields: [type_id], references: [id])
   options  FormFieldOption[]
   answers  FormSubmissionAnswer[]
+  image    Image?
 
   @@map("form_fields")
 }

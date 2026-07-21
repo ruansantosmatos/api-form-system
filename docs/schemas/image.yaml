@@ -1,0 +1,75 @@
+Image:
+  type: object
+  description: >
+    An image attached to a form field (question) or to a form section, never both. The "key" is
+    the R2 object key; the binary itself is never proxied through the API.
+  properties:
+    id:
+      type: integer
+      example: 1
+    field_id:
+      type: integer
+      nullable: true
+    section_id:
+      type: integer
+      nullable: true
+    key:
+      type: string
+      example: fields/12/8f14e45f-ceea-4d8e-88f8-93a2b7c6a3e2-photo.png
+    mime_type:
+      type: string
+      example: image/png
+    size:
+      type: integer
+      description: Size in bytes, as declared by the client when requesting the upload URL.
+      example: 204800
+    created_at:
+      type: string
+      format: date-time
+      nullable: true
+    updated_at:
+      type: string
+      format: date-time
+      nullable: true
+
+CreateImageRequest:
+  type: object
+  required: [file_name, content_type, size]
+  properties:
+    file_name:
+      type: string
+      minLength: 1
+      maxLength: 255
+      example: photo.png
+    content_type:
+      type: string
+      enum: [image/png, image/jpeg, image/webp, image/gif]
+    size:
+      type: integer
+      minimum: 1
+      maximum: 5242880
+      description: Size in bytes. Rejected above 5 MiB.
+
+ImageUploadResponse:
+  type: object
+  description: >
+    The image record is created/updated immediately (any previous object for the same field or
+    section is deleted from R2). The client must then PUT the file bytes directly to "upload_url"
+    with a matching Content-Type before it expires.
+  properties:
+    image:
+      $ref: '#/Image'
+    upload_url:
+      type: string
+      format: uri
+      description: Presigned R2 PUT URL, valid for 5 minutes.
+
+ImageDownloadResponse:
+  type: object
+  properties:
+    image:
+      $ref: '#/Image'
+    url:
+      type: string
+      format: uri
+      description: Presigned R2 GET URL, valid for 1 hour.

@@ -1,0 +1,213 @@
+fieldImage:
+  post:
+    tags: [Images]
+    summary: Request a presigned upload URL for a field's image
+    description: >
+      Considers fields both attached directly to the form and nested in a section. Creates or
+      replaces the field's image record (a field has at most one image); if one already exists,
+      its previous R2 object is deleted. The response's "upload_url" must be PUT to directly
+      (not through this API) with a body matching content_type before it expires.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/image.yaml#/CreateImageRequest'
+    responses:
+      '201':
+        description: Presigned upload URL and the image record.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/image.yaml#/ImageUploadResponse'
+      '400':
+        description: Validation error (bad content_type, file too large, etc).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: Field not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Field not found
+              error: Not Found
+  get:
+    tags: [Images]
+    summary: Get a field's image and a presigned download URL
+    description: >
+      Fully public endpoint — no authentication. Respondents may or may not be logged in when
+      answering a form, so the image needed to render a field must be reachable either way.
+    security: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+    responses:
+      '200':
+        description: The image record and a presigned GET URL.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/image.yaml#/ImageDownloadResponse'
+      '404':
+        description: Field or image not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+              image:
+                value: { statusCode: 404, message: Image not found, error: Not Found }
+  delete:
+    tags: [Images]
+    summary: Delete a field's image
+    description: Deletes both the R2 object and the image record.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/fieldIdParam'
+    responses:
+      '204':
+        description: Image deleted.
+      '404':
+        description: Field or image not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              field:
+                value: { statusCode: 404, message: Field not found, error: Not Found }
+              image:
+                value: { statusCode: 404, message: Image not found, error: Not Found }
+
+sectionImage:
+  post:
+    tags: [Images]
+    summary: Request a presigned upload URL for a section's image
+    description: >
+      Creates or replaces the section's image record (a section has at most one image); if one
+      already exists, its previous R2 object is deleted. The response's "upload_url" must be PUT
+      to directly (not through this API) with a body matching content_type before it expires.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/image.yaml#/CreateImageRequest'
+    responses:
+      '201':
+        description: Presigned upload URL and the image record.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/image.yaml#/ImageUploadResponse'
+      '400':
+        description: Validation error (bad content_type, file too large, etc).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ValidationErrorResponse'
+      '404':
+        description: Section not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            example:
+              statusCode: 404
+              message: Section not found
+              error: Not Found
+  get:
+    tags: [Images]
+    summary: Get a section's image and a presigned download URL
+    description: >
+      Fully public endpoint — no authentication. Respondents may or may not be logged in when
+      answering a form, so the image needed to render a section must be reachable either way.
+    security: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+    responses:
+      '200':
+        description: The image record and a presigned GET URL.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/image.yaml#/ImageDownloadResponse'
+      '404':
+        description: Section or image not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              image:
+                value: { statusCode: 404, message: Image not found, error: Not Found }
+  delete:
+    tags: [Images]
+    summary: Delete a section's image
+    description: Deletes both the R2 object and the image record.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    parameters:
+      - $ref: '#/formIdParam'
+      - $ref: '#/sectionIdParam'
+    responses:
+      '204':
+        description: Image deleted.
+      '404':
+        description: Section or image not found.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+            examples:
+              section:
+                value: { statusCode: 404, message: Section not found, error: Not Found }
+              image:
+                value: { statusCode: 404, message: Image not found, error: Not Found }
+
+formIdParam:
+  name: form_id
+  in: path
+  required: true
+  schema:
+    type: integer
+
+fieldIdParam:
+  name: field_id
+  in: path
+  required: true
+  schema:
+    type: integer
+
+sectionIdParam:
+  name: section_id
+  in: path
+  required: true
+  schema:
+    type: integer
