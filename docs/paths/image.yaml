@@ -45,9 +45,10 @@ fieldImage:
   get:
     tags: [Images]
     summary: Get a field's image and a presigned download URL
-    security:
-      - bearerAuth: []
-      - cookieAuth: []
+    description: >
+      Fully public endpoint — no authentication. Respondents may or may not be logged in when
+      answering a form, so the image needed to render a field must be reachable either way.
+    security: []
     parameters:
       - $ref: '#/formIdParam'
       - $ref: '#/fieldIdParam'
@@ -140,9 +141,10 @@ sectionImage:
   get:
     tags: [Images]
     summary: Get a section's image and a presigned download URL
-    security:
-      - bearerAuth: []
-      - cookieAuth: []
+    description: >
+      Fully public endpoint — no authentication. Respondents may or may not be logged in when
+      answering a form, so the image needed to render a section must be reachable either way.
+    security: []
     parameters:
       - $ref: '#/formIdParam'
       - $ref: '#/sectionIdParam'

@@ -20,7 +20,6 @@ export class ImageController {
   }
 
   @Get(':form_id/fields/:field_id/image')
-  @UseGuards(JwtAuthGuard)
   async getFieldImage(
     @Param('form_id', ParseIntPipe) form_id: number,
     @Param('field_id', ParseIntPipe) field_id: number,
@@ -46,7 +45,6 @@ export class ImageController {
   }
 
   @Get(':form_id/sections/:section_id/image')
-  @UseGuards(JwtAuthGuard)
   async getSectionImage(
     @Param('form_id', ParseIntPipe) form_id: number,
     @Param('section_id', ParseIntPipe) section_id: number,
