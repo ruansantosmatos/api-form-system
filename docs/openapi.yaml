@@ -20,6 +20,8 @@ tags:
     description: Form sections
   - name: Fields
     description: Form fields (questions) and their options
+  - name: Images
+    description: Images attached to form fields (questions) or sections, uploaded directly to R2 via presigned URLs
   - name: Submissions
     description: Form responses and CSV export
   - name: Publication
@@ -121,6 +123,15 @@ components:
     UpdateFieldOptionRequest:
       $ref: './schemas/field.yaml#/UpdateFieldOptionRequest'
 
+    Image:
+      $ref: './schemas/image.yaml#/Image'
+    CreateImageRequest:
+      $ref: './schemas/image.yaml#/CreateImageRequest'
+    ImageUploadResponse:
+      $ref: './schemas/image.yaml#/ImageUploadResponse'
+    ImageDownloadResponse:
+      $ref: './schemas/image.yaml#/ImageDownloadResponse'
+
     CreateSubmissionRequest:
       $ref: './schemas/submission.yaml#/CreateSubmissionRequest'
     SubmissionCreateResult:
@@ -188,6 +199,8 @@ paths:
     $ref: './paths/field.yaml#/options'
   /forms/{form_id}/fields/{field_id}/options/{option_id}:
     $ref: './paths/field.yaml#/optionById'
+  /forms/{form_id}/fields/{field_id}/image:
+    $ref: './paths/image.yaml#/fieldImage'
 
   /forms/{form_id}/sections:
     $ref: './paths/section.yaml#/list'
@@ -207,6 +220,8 @@ paths:
     $ref: './paths/section.yaml#/fieldOptionById'
   /forms/{form_id}/sections/{source_id}/merge/{target_id}:
     $ref: './paths/section.yaml#/merge'
+  /forms/{form_id}/sections/{section_id}/image:
+    $ref: './paths/image.yaml#/sectionImage'
 
   /forms/{form_id}/submissions:
     $ref: './paths/submission.yaml#/list'
