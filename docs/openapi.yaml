@@ -14,6 +14,8 @@ servers:
 tags:
   - name: Auth
     description: Registration, login, session refresh, OAuth, password recovery
+  - name: Account
+    description: Account security settings — recovery email and two-factor authentication (TOTP)
   - name: Forms
     description: Form CRUD, config, and favorites
   - name: Sections
@@ -57,16 +59,31 @@ components:
       $ref: './schemas/auth.yaml#/AuthForgotPasswordRequest'
     AuthResetPasswordRequest:
       $ref: './schemas/auth.yaml#/AuthResetPasswordRequest'
+    AuthVerifyTwoFactorRequest:
+      $ref: './schemas/auth.yaml#/AuthVerifyTwoFactorRequest'
     AuthUser:
       $ref: './schemas/auth.yaml#/AuthUser'
     AuthSessionRef:
       $ref: './schemas/auth.yaml#/AuthSessionRef'
     AuthSessionResponse:
       $ref: './schemas/auth.yaml#/AuthSessionResponse'
+    AuthTwoFactorChallengeResponse:
+      $ref: './schemas/auth.yaml#/AuthTwoFactorChallengeResponse'
     AuthRefreshResponse:
       $ref: './schemas/auth.yaml#/AuthRefreshResponse'
     AuthMeResponse:
       $ref: './schemas/auth.yaml#/AuthMeResponse'
+
+    AccountSettingsResponse:
+      $ref: './schemas/account.yaml#/AccountSettingsResponse'
+    UpdateRecoveryEmailRequest:
+      $ref: './schemas/account.yaml#/UpdateRecoveryEmailRequest'
+    VerifyCodeRequest:
+      $ref: './schemas/account.yaml#/VerifyCodeRequest'
+    AccountTwoFactorSetupResponse:
+      $ref: './schemas/account.yaml#/AccountTwoFactorSetupResponse'
+    AccountTwoFactorConfirmResponse:
+      $ref: './schemas/account.yaml#/AccountTwoFactorConfirmResponse'
     MessageResponse:
       $ref: './schemas/common.yaml#/MessageResponse'
     ErrorResponse:
@@ -157,6 +174,8 @@ components:
 paths:
   /auth/login:
     $ref: './paths/auth.yaml#/login'
+  /auth/login/verify-2fa:
+    $ref: './paths/auth.yaml#/loginVerifyTwoFactor'
   /auth/register:
     $ref: './paths/auth.yaml#/register'
   /auth/me:
@@ -177,6 +196,19 @@ paths:
     $ref: './paths/auth.yaml#/githubCallback'
   /auth/google/callback:
     $ref: './paths/auth.yaml#/googleCallback'
+
+  /account/settings:
+    $ref: './paths/account.yaml#/settings'
+  /account/recovery-email:
+    $ref: './paths/account.yaml#/recoveryEmail'
+  /account/recovery-email/verify:
+    $ref: './paths/account.yaml#/recoveryEmailVerify'
+  /account/2fa/setup:
+    $ref: './paths/account.yaml#/twoFactorSetup'
+  /account/2fa/confirm:
+    $ref: './paths/account.yaml#/twoFactorConfirm'
+  /account/2fa/disable:
+    $ref: './paths/account.yaml#/twoFactorDisable'
 
   /forms:
     $ref: './paths/form.yaml#/root'

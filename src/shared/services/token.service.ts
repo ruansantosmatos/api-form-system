@@ -36,4 +36,16 @@ export class TokenService {
       refresh_token: refreshToken,
     }
   }
+
+  async generateChallengeToken(userId: number, purpose: string): Promise<string> {
+    const JWT_SECRET = this.configService.get<string>('JWT_SECRET')
+    if (!JWT_SECRET) throw new Error('JWT secrets not configured.')
+    return this.jwtService.signAsync({ sub: userId, purpose }, { secret: JWT_SECRET, expiresIn: '10m' })
+  }
+
+  async verifyChallengeToken(token: string): Promise<{ sub: number; purpose: string }> {
+    const JWT_SECRET = this.configService.get<string>('JWT_SECRET')
+    if (!JWT_SECRET) throw new Error('JWT secrets not configured.')
+    return this.jwtService.verifyAsync(token, { secret: JWT_SECRET })
+  }
 }

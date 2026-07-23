@@ -1,0 +1,86 @@
+AccountSettingsResponse:
+  type: object
+  description: Current account security settings for the authenticated user.
+  properties:
+    email:
+      type: string
+      format: email
+      description: The account's login email (read-only here; not editable through this API).
+      example: jane@example.com
+    recovery_email:
+      type: string
+      format: email
+      nullable: true
+      description: Verified email used for account recovery. Null until a recovery email has been set and verified.
+      example: jane.personal@example.com
+    recovery_email_verified:
+      type: boolean
+      description: Whether recovery_email has completed verification.
+    recovery_email_pending:
+      type: string
+      format: email
+      nullable: true
+      description: >
+        Set right after PATCH /account/recovery-email, while the new address hasn't been
+        confirmed yet via POST /account/recovery-email/verify. Null when there's no change in
+        progress. Survives page reloads, so the UI can resume the "check your email" step.
+      example: jane.new@example.com
+    is_2fa_enabled:
+      type: boolean
+      description: Whether TOTP-based two-factor authentication is required at login.
+
+UpdateRecoveryEmailRequest:
+  type: object
+  required: [recovery_email]
+  properties:
+    recovery_email:
+      type: string
+      format: email
+      description: Must differ from the account's login email. Stored as pending until confirmed via POST /account/recovery-email/verify.
+      example: jane.personal@example.com
+
+VerifyCodeRequest:
+  type: object
+  required: [code]
+  properties:
+    code:
+      type: string
+      minLength: 6
+      maxLength: 10
+      description: A 6-digit code (email or authenticator app) or, where accepted, a one-time backup code.
+      example: '123456'
+
+AccountTwoFactorSetupResponse:
+  type: object
+  description: >
+    Starts (or restarts) 2FA setup. The secret is stored encrypted server-side with is_enabled
+    false until confirmed via POST /account/2fa/confirm; calling setup again replaces any
+    unconfirmed secret.
+  properties:
+    secret:
+      type: string
+      description: Base32-encoded TOTP secret, for manual entry if the QR code can't be scanned.
+      example: JBSWY3DPEHPK3PXP
+    otpauth_url:
+      type: string
+      description: otpauth:// URI encoding the secret and issuer, used to build the QR code.
+      example: otpauth://totp/FormSystem:jane%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=FormSystem
+    qr_code_data_uri:
+      type: string
+      description: PNG QR code encoding otpauth_url, as a data:image/png;base64,... URI ready to render in an <img> tag.
+
+AccountTwoFactorConfirmResponse:
+  type: object
+  description: >
+    Returned once, immediately after enabling 2FA. The backup_codes are shown in cleartext only
+    here — store them somewhere safe, they cannot be retrieved again.
+  properties:
+    message:
+      type: string
+      example: Two-factor authentication enabled successfully.
+    backup_codes:
+      type: array
+      items:
+        type: string
+      description: One-time-use codes that can replace the TOTP code if the authenticator app is unavailable.
+      example: ['986c8e24e4', '78e0338671', '65a2262a41']
