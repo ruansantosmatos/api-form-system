@@ -5,7 +5,11 @@ export const TOKENS_EXPIRES = {
     REMEMBER_ME: 90 * 24 * 60 * 60 * 1000, // 90 days - matches SESSION_EXPIRES_DAYS.ABSOLUTE.REMEMBER_ME
   },
   PASSWORD_RESET: 60 * 60 * 1000, // 1 hour
+  RECOVERY_EMAIL_VERIFY: 60 * 60 * 1000, // 1 hour
+  TWO_FACTOR_CHALLENGE: 10 * 60 * 1000, // 10 minutes
 }
+
+export const VERIFICATION_CODE_MAX_ATTEMPTS = 5
 
 export const SESSION_EXPIRES_DAYS = {
   REFRESH_TOKEN: {

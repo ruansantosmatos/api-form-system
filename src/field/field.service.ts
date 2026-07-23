@@ -1,4 +1,5 @@
 import { FormField, FormFieldOption, Prisma } from 'src/generated/prisma/client'
+import { R2Service } from 'src/shared/services/r2.service'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import type {
@@ -16,7 +17,10 @@ import type {
 
 @Injectable()
 export class FieldService {
-  constructor(private readonly prisma: PrismaClientService) {}
+  constructor(
+    private readonly prisma: PrismaClientService,
+    private readonly r2: R2Service,
+  ) {}
 
   private async findFieldInForm(field_id: number, form_id: number) {
     const field = await this.prisma.formField.findFirst({
@@ -118,6 +122,9 @@ export class FieldService {
     const field = await this.prisma.formField.findUnique({ where: { id: field_id, form_id } })
     if (!field) throw new NotFoundException('Field not found')
 
+    const image = await this.prisma.image.findUnique({ where: { field_id } })
+    if (image) await this.r2.deleteObject({ key: image.key })
+
     await this.prisma.$transaction(async tx => {
       const answers = await tx.formSubmissionAnswer.findMany({ where: { field_id }, select: { id: true } })
       const answerIds = answers.map(a => a.id)
@@ -125,6 +132,7 @@ export class FieldService {
       await tx.formSubmissionAnswerOption.deleteMany({ where: { answer_id: { in: answerIds } } })
       await tx.formSubmissionAnswer.deleteMany({ where: { field_id } })
       await tx.formFieldOption.deleteMany({ where: { field_id } })
+      if (image) await tx.image.delete({ where: { id: image.id } })
       await tx.formField.delete({ where: { id: field_id } })
     })
   }

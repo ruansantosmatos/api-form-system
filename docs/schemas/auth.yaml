@@ -78,6 +78,20 @@ AuthResetPasswordRequest:
       minLength: 6
       example: newSecret123
 
+AuthVerifyTwoFactorRequest:
+  type: object
+  required: [challenge_token, code]
+  properties:
+    challenge_token:
+      type: string
+      description: The challenge_token returned by POST /auth/login when requires_2fa is true. Valid for 10 minutes.
+    code:
+      type: string
+      minLength: 6
+      maxLength: 10
+      description: A 6-digit code from the user's authenticator app, or a one-time backup code.
+      example: '123456'
+
 AuthUser:
   type: object
   properties:
@@ -108,6 +122,20 @@ AuthSessionResponse:
   properties:
     session:
       $ref: '#/AuthSessionRef'
+
+AuthTwoFactorChallengeResponse:
+  type: object
+  description: >
+    Returned by POST /auth/login instead of AuthSessionResponse when the account has 2FA
+    enabled. No session cookies are set yet — call POST /auth/login/verify-2fa with the
+    challenge_token and a TOTP/backup code to complete login.
+  properties:
+    requires_2fa:
+      type: boolean
+      enum: [true]
+    challenge_token:
+      type: string
+      description: Short-lived (10 min) signed token identifying the pending login, to be echoed back to /auth/login/verify-2fa.
 
 AuthRefreshResponse:
   type: object

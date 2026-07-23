@@ -3,9 +3,11 @@ login:
     tags: [Auth]
     summary: Log in with email and password
     description: >
-      Verifies the email/password pair and starts a new session. On success, sets the
-      access_token (15 min), refresh_token (7 days, or 90 days when remember_me is true), and
-      session_id cookies (all httpOnly). No user data is returned in the body — call
+      Verifies the email/password pair. If the account has 2FA enabled, no session is created
+      yet — the response is an AuthTwoFactorChallengeResponse and the client must call
+      POST /auth/login/verify-2fa to complete login. Otherwise, starts a new session and sets
+      the access_token (15 min), refresh_token (7 days, or 90 days when remember_me is true),
+      and session_id cookies (all httpOnly). No user data is returned in the body — call
       GET /auth/me to fetch the current user.
     security: []
     requestBody:
@@ -16,11 +18,13 @@ login:
             $ref: '../schemas/auth.yaml#/AuthLoginRequest'
     responses:
       '200':
-        description: Login successful.
+        description: Login successful, or a 2FA challenge was issued.
         content:
           application/json:
             schema:
-              $ref: '../schemas/auth.yaml#/AuthSessionResponse'
+              oneOf:
+                - $ref: '../schemas/auth.yaml#/AuthSessionResponse'
+                - $ref: '../schemas/auth.yaml#/AuthTwoFactorChallengeResponse'
       '400':
         description: >
           Invalid email or password. The same message is returned whether the email doesn't
@@ -34,6 +38,40 @@ login:
               statusCode: 400
               message: Invalid email or password.
               error: Bad Request
+
+loginVerifyTwoFactor:
+  post:
+    tags: [Auth]
+    summary: Complete login by verifying a 2FA challenge
+    description: >
+      Verifies the challenge_token from POST /auth/login together with a TOTP code (or backup
+      code) and, on success, starts a new session with the same cookies as a normal login.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/auth.yaml#/AuthVerifyTwoFactorRequest'
+    responses:
+      '200':
+        description: Login successful.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/auth.yaml#/AuthSessionResponse'
+      '400':
+        description: The code is invalid, expired, or already used.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: The challenge_token is missing, invalid, expired, or not a 2FA challenge.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
 
 register:
   post:

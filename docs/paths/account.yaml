@@ -1,0 +1,193 @@
+settings:
+  get:
+    tags: [Account]
+    summary: Get the current user's account security settings
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '200':
+        description: Current settings.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/account.yaml#/AccountSettingsResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+recoveryEmail:
+  patch:
+    tags: [Account]
+    summary: Request a recovery email change
+    description: >
+      Stores the new address as pending and emails it a 6-digit verification code (valid 1
+      hour). The recovery_email field is not updated until the code is confirmed via
+      POST /account/recovery-email/verify.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/account.yaml#/UpdateRecoveryEmailRequest'
+    responses:
+      '200':
+        description: Verification code sent to the new recovery email.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/MessageResponse'
+            example:
+              message: Verification code sent to the new recovery email.
+      '400':
+        description: The recovery email matches the account's login email.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+recoveryEmailVerify:
+  post:
+    tags: [Account]
+    summary: Confirm a pending recovery email change
+    description: Verifies the code sent to the new address and, on success, promotes it to recovery_email.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/account.yaml#/VerifyCodeRequest'
+    responses:
+      '201':
+        description: Recovery email verified.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/MessageResponse'
+            example:
+              message: Recovery email verified successfully.
+      '400':
+        description: No pending change exists, or the code is invalid, expired, or already used too many times.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+twoFactorSetup:
+  post:
+    tags: [Account]
+    summary: Start TOTP two-factor authentication setup
+    description: >
+      Generates a new TOTP secret (stored encrypted, not yet active) and returns it along with
+      a QR code for scanning into an authenticator app (Google Authenticator, Authy, etc.).
+      2FA is not required at login until confirmed via POST /account/2fa/confirm.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '201':
+        description: Setup started.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/account.yaml#/AccountTwoFactorSetupResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+twoFactorConfirm:
+  post:
+    tags: [Account]
+    summary: Confirm TOTP setup and enable 2FA
+    description: >
+      Validates a code from the authenticator app against the pending secret. On success, 2FA
+      becomes required at login and a fresh set of one-time backup codes is generated and
+      returned (shown only this once).
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/account.yaml#/VerifyCodeRequest'
+    responses:
+      '201':
+        description: Two-factor authentication enabled.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/account.yaml#/AccountTwoFactorConfirmResponse'
+      '400':
+        description: No setup was started, or the code is invalid or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+twoFactorDisable:
+  post:
+    tags: [Account]
+    summary: Disable two-factor authentication
+    description: Requires a valid TOTP code or unused backup code. On success, deletes the stored secret and remaining backup codes.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/account.yaml#/VerifyCodeRequest'
+    responses:
+      '201':
+        description: Two-factor authentication disabled.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/MessageResponse'
+            example:
+              message: Two-factor authentication disabled successfully.
+      '400':
+        description: 2FA is not enabled, or the code is invalid, expired, or already used.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'

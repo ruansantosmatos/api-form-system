@@ -1,4 +1,5 @@
 import { Form } from 'src/generated/prisma/client'
+import { R2Service } from 'src/shared/services/r2.service'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import type {
@@ -17,7 +18,10 @@ import type {
 
 @Injectable()
 export class FormService {
-  constructor(private readonly prisma: PrismaClientService) {}
+  constructor(
+    private readonly prisma: PrismaClientService,
+    private readonly r2: R2Service,
+  ) {}
 
   async getAll({ user_id, page, limit, sort, status, search }: FormServiceGetAll): Promise<FormPaginatedResult> {
     const skip = (page - 1) * limit
@@ -115,18 +119,27 @@ export class FormService {
 
     if (form.user_id !== user_id) throw new ForbiddenException('Form not access')
 
+    const sections = await this.prisma.formSection.findMany({ where: { form_id }, select: { id: true } })
+    const sectionIds = sections.map(s => s.id)
+
+    const fields = await this.prisma.formField.findMany({
+      where: { OR: [{ form_id }, { section_id: { in: sectionIds } }] },
+      select: { id: true },
+    })
+    const fieldIds = fields.map(f => f.id)
+
+    const images = await this.prisma.image.findMany({
+      where: { OR: [{ field_id: { in: fieldIds } }, { section_id: { in: sectionIds } }] },
+    })
+
+    await Promise.all(images.map(image => this.r2.deleteObject({ key: image.key })))
+
     await this.prisma.$transaction(async tx => {
       const submissions = await tx.formSubmission.findMany({
         where: { form_id },
         select: { id: true },
       })
       const submissionIds = submissions.map(s => s.id)
-
-      const fields = await tx.formField.findMany({
-        where: { form_id },
-        select: { id: true },
-      })
-      const fieldIds = fields.map(f => f.id)
 
       const answers = await tx.formSubmissionAnswer.findMany({
         where: { submission_id: { in: submissionIds } },
@@ -138,7 +151,8 @@ export class FormService {
       await tx.formSubmissionAnswer.deleteMany({ where: { submission_id: { in: submissionIds } } })
       await tx.formSubmission.deleteMany({ where: { form_id } })
       await tx.formFieldOption.deleteMany({ where: { field_id: { in: fieldIds } } })
-      await tx.formField.deleteMany({ where: { form_id } })
+      await tx.image.deleteMany({ where: { id: { in: images.map(i => i.id) } } })
+      await tx.formField.deleteMany({ where: { id: { in: fieldIds } } })
       await tx.formSection.deleteMany({ where: { form_id } })
       await tx.formPublication.deleteMany({ where: { form_id } })
       await tx.form.delete({ where: { id: form_id } })

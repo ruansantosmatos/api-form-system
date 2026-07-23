@@ -1,5 +1,6 @@
 import { Session } from 'src/generated/prisma/client'
 import { ClientInfoType } from 'src/shared/types/client-info.type'
+import { SessionCreateResult } from 'src/shared/types/session-service.type'
 
 export type AuthRevocationSession = Pick<Session, 'is_valid' | 'updated_at' | 'revocation_reason'>
 
@@ -59,4 +60,17 @@ export type AuthServiceForgotPassword = {
 export type AuthServiceResetPassword = {
   token: string
   password: string
+}
+
+export type AuthTwoFactorChallengeResult = {
+  requires_2fa: true
+  challenge_token: string
+}
+
+export type AuthLoginResult = SessionCreateResult | AuthTwoFactorChallengeResult
+
+export type AuthServiceVerifyTwoFactor = {
+  client: ClientInfoType
+  challenge_token: string
+  code: string
 }
