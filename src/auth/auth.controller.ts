@@ -16,7 +16,7 @@ import { createRegisterSchema, type CreateRegisterDto } from './dto/auth-registe
 import { authForgotPasswordSchema, type AuthForgotPasswordDto } from './dto/auth-forgot-password.dto'
 import { authResetPasswordSchema, type AuthResetPasswordDto } from './dto/auth-reset-password.dto'
 import { authVerifyTwoFactorSchema, type AuthVerifyTwoFactorDto } from './dto/auth-verify-two-factor.dto'
-import { Throttle } from '@nestjs/throttler'
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
 import { Controller, Get, Injectable, Post, Query, Req, Res, UseGuards } from '@nestjs/common'
 
 @Injectable()
@@ -81,6 +81,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async login(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(authLoginSchema) body: AuthLoginDto) {
     const result = await this.authService.login({ client, data: body })
@@ -99,6 +100,7 @@ export class AuthController {
   }
 
   @Post('login/verify-2fa')
+  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async verifyTwoFactor(
     @Res() res: Response,
@@ -116,6 +118,8 @@ export class AuthController {
   }
 
   @Post('register')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async register(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(createRegisterSchema) body: CreateRegisterDto) {
     const cookieOptions = getCookieOptions()
     const { session_id, access_token, refresh_token } = await this.authService.register({ client, data: body })
@@ -128,11 +132,15 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 15 * 60 * 1000 } })
   async forgotPassword(@ZodBody(authForgotPasswordSchema) body: AuthForgotPasswordDto) {
     return this.authService.forgotPassword(body)
   }
 
   @Post('reset-password')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async resetPassword(@ZodBody(authResetPasswordSchema) body: AuthResetPasswordDto) {
     return this.authService.resetPassword(body)
   }

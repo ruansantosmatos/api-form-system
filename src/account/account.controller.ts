@@ -1,5 +1,5 @@
 import { AccountService } from './account.service'
-import { Throttle } from '@nestjs/throttler'
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
 import { verifyCodeSchema, type VerifyCodeDto } from './dto/verify-code.dto'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
@@ -24,7 +24,7 @@ export class AccountController {
   }
 
   @Post('recovery-email/verify')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async verifyRecoveryEmail(@CurrentUser() user_id: number, @ZodBody(verifyCodeSchema) body: VerifyCodeDto) {
     return this.accountService.verifyRecoveryEmail({ user_id, code: body.code })
@@ -37,14 +37,14 @@ export class AccountController {
   }
 
   @Post('2fa/confirm')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async confirmTwoFactor(@CurrentUser() user_id: number, @ZodBody(verifyCodeSchema) body: VerifyCodeDto) {
     return this.accountService.confirmTwoFactor({ user_id, code: body.code })
   }
 
   @Post('2fa/disable')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async disableTwoFactor(@CurrentUser() user_id: number, @ZodBody(verifyCodeSchema) body: VerifyCodeDto) {
     return this.accountService.disableTwoFactor({ user_id, code: body.code })
