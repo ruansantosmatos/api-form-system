@@ -1,98 +1,181 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# FormSystem API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)
+![MariaDB](https://img.shields.io/badge/MariaDB-8.4-003545?logo=mariadb&logoColor=white)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+API REST para criação de formulários dinâmicos: montagem de seções e campos, publicação pública via link, coleta de respostas e exportação de resultados. Inclui autenticação própria com sessões rotativas, login social (Google/GitHub) e autenticação de dois fatores (TOTP).
 
-## Description
+## Sumário
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [Stack tecnológica](#stack-tecnológica)
+- [Arquitetura em alto nível](#arquitetura-em-alto-nível)
+- [Como rodar o projeto](#como-rodar-o-projeto)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Documentação da API](#documentação-da-api)
+- [Scripts disponíveis](#scripts-disponíveis)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [Testes](#testes)
+- [Mais documentação](#mais-documentação)
 
-## Project setup
+## Stack tecnológica
 
-```bash
-$ npm install
+| Camada                    | Tecnologia                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| Framework                 | NestJS 11 (Express)                                                           |
+| Linguagem                 | TypeScript                                                                    |
+| Banco de dados            | MariaDB / MySQL, via Prisma ORM                                               |
+| Validação                 | Zod (pipe customizado, não usa `class-validator`)                             |
+| Autenticação              | JWT (access + refresh) em cookie httpOnly, OAuth2 (Google/GitHub), TOTP (2FA) |
+| Armazenamento de arquivos | Cloudflare R2 (S3-compatible), via URLs pré-assinadas                         |
+| E-mail                    | Resend                                                                        |
+| Rate limiting             | `@nestjs/throttler`, escopado nas rotas sensíveis                             |
+| Documentação da API       | OpenAPI 3 (YAML manual, modular) + Swagger UI                                 |
+| Containerização           | Docker multi-stage + docker-compose                                           |
+
+## Arquitetura em alto nível
+
+```mermaid
+flowchart LR
+    Client[Client / Frontend]
+
+    subgraph API[FormSystem API - NestJS]
+        Auth[Auth / Account]
+        Form[Form / Section / Field]
+        Publication[Publication]
+        Submission[Submission]
+        Image[Image]
+    end
+
+    DB[(MariaDB)]
+    R2[(Cloudflare R2)]
+    Mail[Resend]
+    OAuth[Google / GitHub OAuth]
+
+    Client -->|JWT cookie| Auth
+    Client --> Form
+    Client -->|link público| Publication
+    Client --> Submission
+    Client --> Image
+
+    Auth --> DB
+    Auth --> OAuth
+    Auth --> Mail
+    Form --> DB
+    Publication --> DB
+    Submission --> DB
+    Submission -->|export CSV| Mail
+    Image --> DB
+    Image -->|presigned URL| R2
 ```
 
-## Compile and run the project
+Cada módulo em `src/<module>` corresponde a um domínio do sistema e segue o mesmo padrão: `controller` → `service` → Prisma. Detalhes de cada fluxo (autenticação, publicação, submissão) estão em [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Como rodar o projeto
+
+### Pré-requisitos
+
+- Node.js 22+
+- Docker e Docker Compose (recomendado) **ou** uma instância MariaDB/MySQL local
+
+### Passo a passo (com Docker)
 
 ```bash
-# development
-$ npm run start
+# 1. Clone o repositório
+git clone <repo-url>
+cd api-form-system
 
-# watch mode
-$ npm run start:dev
+# 2. Copie o arquivo de exemplo e preencha as variáveis
+cp .example-env .env
 
-# production mode
-$ npm run start:prod
+# 3. Suba a API e o banco de dados
+docker compose up --build
 ```
 
-## Run tests
+O container da API já roda `prisma migrate deploy` automaticamente antes de subir (ver `Dockerfile`).
+
+### Passo a passo (ambiente local, sem Docker)
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
+cp .example-env .env   # aponte DATABASE_URL para seu banco local
+npx prisma migrate dev
+npm run start:dev
 ```
 
-## Deployment
+A API sobe em `http://localhost:${PORT}` (padrão `3001`).
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Variáveis de ambiente
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Todas as variáveis estão listadas em [.example-env](.example-env). Principais grupos:
+
+| Grupo          | Variáveis                                                                                               | Descrição                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| App            | `NODE_ENV`, `PORT`, `APP_NAME`, `CLIENT_URL`, `CORS_ORIGINS`, `COOKIE_DOMAIN`                           | Configuração geral e CORS/cookies                                    |
+| Banco de dados | `DATABASE_URL`, `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME` | Conexão MariaDB via Prisma                                           |
+| Autenticação   | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`, `APP_ENCRYPTION_KEY`    | Assinatura de tokens e criptografia de segredos (ex.: 2FA)           |
+| OAuth          | `GOOGLE_CLIENT_ID/SECRET/CALLBACK_URL`, `GITHUB_CLIENT_ID/SECRET/CALLBACK_URL`                          | Login social                                                         |
+| E-mail         | `RESEND_API_KEY`, `MAIL_FROM`                                                                           | Envio de e-mails transacionais (reset de senha, export de respostas) |
+| Armazenamento  | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_API_TOKEN`, `R2_BUCKET`                | Upload de imagens via Cloudflare R2                                  |
+
+## Documentação da API
+
+A referência completa de rotas, payloads e respostas é gerada a partir de `docs/openapi.yaml` (spec modular, ver `docs/paths/` e `docs/schemas/`) e servida via Swagger UI:
+
+```
+GET /docs
+```
+
+Em produção, `/docs` fica protegido por Basic Auth (ver `src/shared/utils/docsBasicAuth.ts`). Não duplique a documentação de endpoints aqui no README — a spec OpenAPI é a fonte de verdade.
+
+## Scripts disponíveis
+
+| Script               | Descrição                                           |
+| -------------------- | --------------------------------------------------- |
+| `npm run start:dev`  | Sobe a API em modo watch                            |
+| `npm run build`      | Compila para `dist/`                                |
+| `npm run start:prod` | Roda o build de produção (`dist/main`)              |
+| `npm run lint`       | ESLint com `--fix`                                  |
+| `npm run format`     | Formata `src`, `prisma/seeds` e `test` com Prettier |
+| `npm run test`       | Testes unitários (Jest)                             |
+| `npm run test:e2e`   | Testes end-to-end                                   |
+| `npm run test:cov`   | Testes com relatório de cobertura                   |
+
+## Estrutura do projeto
+
+```
+src/
+  account/       # configurações de segurança da conta (e-mail de recuperação, 2FA)
+  auth/          # login, registro, sessões, OAuth, recuperação de senha
+  form/          # CRUD de formulários e configuração
+  section/       # seções de um formulário
+  field/         # campos (perguntas) e opções
+  image/         # upload de imagens (presigned URL para R2)
+  publication/   # exposição pública de um formulário publicado
+  submission/    # respostas de formulários e exportação
+  shared/        # guards, decorators, services e utils reutilizados entre módulos
+prisma/          # schema.prisma e seeds
+docs/            # OpenAPI (paths/ e schemas/ por módulo) + documentação técnica
+```
+
+Cada módulo de domínio segue a mesma convenção: `*.module.ts`, `*.controller.ts`, `*.service.ts`, `dto/` (schemas Zod) e `interface/` (tipos usados entre controller e service).
+
+## Testes
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run test        # unitários
+npm run test:e2e     # end-to-end (test/jest-e2e.json)
+npm run test:cov     # cobertura
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Mais documentação
 
-## Resources
+- [ARCHITECTURE.md](ARCHITECTURE.md) — decisões de arquitetura, modelo de dados e fluxos (autenticação, publicação, upload de imagens)
+- [CONTRIBUTING.md](CONTRIBUTING.md) — padrão de commits, branches e processo de PR
 
-Check out a few resources that may come in handy when working with NestJS:
+## Licença
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Distribuído sob a licença [Apache 2.0](LICENSE).
