@@ -60,7 +60,7 @@ Se a mudança adiciona ou altera uma rota:
    ```
 3. Confirme que a rota pública (sem autenticação) define `security: []` explicitamente no YAML, caso não exija login.
 
-Se a mudança afeta um fluxo descrito em [ARCHITECTURE.md](ARCHITECTURE.md) (autenticação, sessões, publicação, upload), atualize o diagrama correspondente.
+Se a mudança afeta um fluxo descrito na seção [🏗️ Arquitetura](README.md#️-arquitetura) do README (autenticação, sessões, publicação, upload), atualize o diagrama correspondente.
 
 ## Pull Requests
 
