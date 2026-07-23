@@ -1,4 +1,5 @@
 import { FormField, FormFieldOption, FormSection, Prisma } from 'src/generated/prisma/client'
+import { R2Service } from 'src/shared/services/r2.service'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import type {
@@ -23,7 +24,10 @@ import type {
 
 @Injectable()
 export class SectionService {
-  constructor(private readonly prisma: PrismaClientService) {}
+  constructor(
+    private readonly prisma: PrismaClientService,
+    private readonly r2: R2Service,
+  ) {}
 
   private async cloneOptionsForField(tx: Prisma.TransactionClient, options: FormFieldOption[], field_id: number): Promise<void> {
     if (options.length === 0) return
@@ -92,10 +96,16 @@ export class SectionService {
     const section = await this.prisma.formSection.findUnique({ where: { id: section_id, form_id } })
     if (!section) throw new NotFoundException('Section not found')
 
-    await this.prisma.$transaction(async tx => {
-      const fields = await tx.formField.findMany({ where: { section_id }, select: { id: true } })
-      const fieldIds = fields.map(f => f.id)
+    const fields = await this.prisma.formField.findMany({ where: { section_id }, select: { id: true } })
+    const fieldIds = fields.map(f => f.id)
 
+    const images = await this.prisma.image.findMany({
+      where: { OR: [{ section_id }, { field_id: { in: fieldIds } }] },
+    })
+
+    await Promise.all(images.map(image => this.r2.deleteObject({ key: image.key })))
+
+    await this.prisma.$transaction(async tx => {
       const answers = await tx.formSubmissionAnswer.findMany({
         where: { field_id: { in: fieldIds } },
         select: { id: true },
@@ -105,6 +115,7 @@ export class SectionService {
       await tx.formSubmissionAnswerOption.deleteMany({ where: { answer_id: { in: answerIds } } })
       await tx.formSubmissionAnswer.deleteMany({ where: { field_id: { in: fieldIds } } })
       await tx.formFieldOption.deleteMany({ where: { field_id: { in: fieldIds } } })
+      await tx.image.deleteMany({ where: { id: { in: images.map(i => i.id) } } })
       await tx.formField.deleteMany({ where: { section_id } })
       await tx.formSection.delete({ where: { id: section_id } })
     })
@@ -166,6 +177,9 @@ export class SectionService {
     const field = await this.prisma.formField.findUnique({ where: { id: field_id, section_id } })
     if (!field) throw new NotFoundException('Field not found')
 
+    const image = await this.prisma.image.findUnique({ where: { field_id } })
+    if (image) await this.r2.deleteObject({ key: image.key })
+
     await this.prisma.$transaction(async tx => {
       const answers = await tx.formSubmissionAnswer.findMany({ where: { field_id }, select: { id: true } })
       const answerIds = answers.map(a => a.id)
@@ -173,6 +187,7 @@ export class SectionService {
       await tx.formSubmissionAnswerOption.deleteMany({ where: { answer_id: { in: answerIds } } })
       await tx.formSubmissionAnswer.deleteMany({ where: { field_id } })
       await tx.formFieldOption.deleteMany({ where: { field_id } })
+      if (image) await tx.image.delete({ where: { id: image.id } })
       await tx.formField.delete({ where: { id: field_id } })
     })
   }

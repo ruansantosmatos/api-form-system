@@ -3,7 +3,9 @@ import { ConfigService } from '@nestjs/config'
 import { AUTH_METHOD } from 'src/shared/consts/auth-method'
 import { AUTH_PROVIDER } from 'src/shared/consts/auth-provider'
 import { REVOCATION } from '../shared/consts/revocation-reason'
+import { TokenService } from 'src/shared/services/token.service'
 import { MailService } from 'src/shared/services/mail.service'
+import { TwoFactorService } from 'src/shared/services/two-factor.service'
 import { SessionService } from 'src/shared/services/session.service'
 import { TOKENS_EXPIRES } from 'src/shared/consts/tokens-expires'
 import { SecurityService } from '../shared/services/security.service'
@@ -11,8 +13,9 @@ import { GithubAuthService } from 'src/shared/services/github-auth.service'
 import { GoogleAuthService } from 'src/shared/services/google-auth.service'
 import { PrismaClientService } from '../shared/services/prisma-client.service'
 import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common'
-import { SessionRefreshResult, SessionWithUserResult } from 'src/shared/types/session-service.type'
+import { SessionRefreshResult, SessionCreateResult } from 'src/shared/types/session-service.type'
 import {
+  AuthLoginResult,
   AuthServiceLogin,
   AuthServiceSignUp,
   AuthServiceGithub,
@@ -25,6 +28,7 @@ import {
   AuthServiceResetPassword,
   AuthForgotPasswordResult,
   AuthResetPasswordResult,
+  AuthServiceVerifyTwoFactor,
   AuthMeResult,
 } from './interface/auth.interface'
 
@@ -33,6 +37,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaClientService,
     private readonly mailService: MailService,
+    private readonly tokenService: TokenService,
+    private readonly twoFactorService: TwoFactorService,
     private readonly configService: ConfigService,
     private readonly sessionService: SessionService,
     private readonly securityService: SecurityService,
@@ -75,7 +81,7 @@ export class AuthService {
     return { message: 'Logged out successfully.' }
   }
 
-  async login({ client, data }: AuthServiceLogin): Promise<SessionWithUserResult> {
+  async login({ client, data }: AuthServiceLogin): Promise<AuthLoginResult> {
     const { email, password, remember_me } = data
     const user = await this.prisma.user.findUnique({ where: { email } })
 
@@ -91,11 +97,38 @@ export class AuthService {
     const isPasswordValid = await this.securityService.compare(password, hash)
     if (!isPasswordValid) throw new BadRequestException('Invalid email or password.')
 
+    const twoFactorAuth = await this.prisma.twoFactorAuth.findUnique({ where: { user_id: user.id } })
+
+    if (twoFactorAuth?.is_enabled) {
+      const challenge_token = await this.tokenService.generateChallengeToken(user.id, 'two_factor_login')
+      return { requires_2fa: true, challenge_token }
+    }
+
     const session = await this.sessionService.create({ user_id: user.id, client, rememberMe: remember_me })
-    return { ...session, user: { id: user.id, name: user.name, email: user.email } }
+    return session
   }
 
-  async register({ client, data }: AuthServiceSignUp): Promise<SessionWithUserResult> {
+  async verifyTwoFactorChallenge({ client, challenge_token, code }: AuthServiceVerifyTwoFactor): Promise<SessionCreateResult> {
+    let payload: { sub: number; purpose: string }
+
+    try {
+      payload = await this.tokenService.verifyChallengeToken(challenge_token)
+    } catch {
+      throw new UnauthorizedException('Challenge token is invalid or has expired.')
+    }
+
+    if (payload.purpose !== 'two_factor_login') throw new UnauthorizedException('Challenge token is invalid or has expired.')
+
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } })
+    if (!user) throw new UnauthorizedException('Challenge token is invalid or has expired.')
+
+    await this.twoFactorService.verifyCode({ user_id: user.id, code })
+
+    const session = await this.sessionService.create({ user_id: user.id, client })
+    return session
+  }
+
+  async register({ client, data }: AuthServiceSignUp): Promise<SessionCreateResult> {
     const { name, email, password } = data
     const user = await this.prisma.user.findUnique({ where: { email } })
 
@@ -107,7 +140,7 @@ export class AuthService {
 
     await this.prisma.authMethod.create({ data: { user_id, type: AUTH_METHOD.PASSWORD, password_hash } })
     const session = await this.sessionService.create({ user_id: new_user.id, client })
-    return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
+    return session
   }
 
   async refresh(sessionId: number, refreshToken: string): Promise<SessionRefreshResult> {
@@ -157,7 +190,7 @@ export class AuthService {
     return refreshedSession
   }
 
-  async authenticateWithGithub({ code, client, rememberMe }: AuthServiceGithub): Promise<SessionWithUserResult> {
+  async authenticateWithGithub({ code, client, rememberMe }: AuthServiceGithub): Promise<SessionCreateResult> {
     const { access_token } = await this.githubAuthService.getAccessToken(code)
     const user_github = await this.githubAuthService.getGithubUser(access_token)
 
@@ -171,33 +204,33 @@ export class AuthService {
     const email = user_github.email ?? primary_email
 
     if (!email) throw new UnauthorizedException('Github account email not verified.')
-    const user = await this.prisma.user.findUnique({ where: { email: email } })
+    const user = await this.prisma.user.findUnique({ where: { email: email }, select: { id: true } })
 
     const auth_method = await this.prisma.authMethod.findFirst({
       where: { provider_id, provider },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true } } },
     })
 
     if (auth_method) {
-      const { id, name, email } = auth_method.user
+      const { id } = auth_method.user
       const session = await this.sessionService.create({ user_id: id, client, rememberMe })
-      return { ...session, user: { id, name, email } }
+      return session
     }
 
     if (user && !auth_method) {
       await this.githubAuthService.bindAuthMethod(user.id, provider_id)
       const session = await this.sessionService.create({ user_id: user.id, client, rememberMe })
-      return { ...session, user: { id: user.id, name: user.name, email: user.email } }
+      return session
     }
 
     const new_user = await this.prisma.user.create({ data: { name: name, email: email } })
     await this.githubAuthService.bindAuthMethod(new_user.id, provider_id)
 
     const session = await this.sessionService.create({ user_id: new_user.id, client, rememberMe })
-    return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
+    return session
   }
 
-  async authenticateWithGoogle({ client, code, rememberMe }: AuthServiceGoogle): Promise<SessionWithUserResult> {
+  async authenticateWithGoogle({ client, code, rememberMe }: AuthServiceGoogle): Promise<SessionCreateResult> {
     const { id_token } = await this.googleAuthService.getAccessToken(code)
     const payload = await this.googleAuthService.verifyToken(id_token)
 
@@ -209,31 +242,31 @@ export class AuthService {
 
     const auth_method = await this.prisma.authMethod.findFirst({
       where: { provider_id: provider_id, provider: AUTH_PROVIDER.GOOGLE },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true } } },
     })
 
     const user = await this.prisma.user.findUnique({
       where: { email },
-      select: { id: true, name: true, email: true },
+      select: { id: true },
     })
 
     if (auth_method) {
-      const { id, name, email } = auth_method.user
+      const { id } = auth_method.user
       const session = await this.sessionService.create({ user_id: id, client, rememberMe })
-      return { ...session, user: { id, name, email } }
+      return session
     }
 
     if (user && !auth_method) {
       await this.googleAuthService.bindAuthMethod(user.id, provider_id)
       const session = await this.sessionService.create({ user_id: user.id, client, rememberMe })
-      return { ...session, user: { id: user.id, name: user.name, email: user.email } }
+      return session
     }
 
     const new_user = await this.prisma.user.create({ data: { name: name as string, email: email as string } })
     await this.googleAuthService.bindAuthMethod(new_user.id, provider_id)
 
     const session = await this.sessionService.create({ user_id: new_user.id, client, rememberMe })
-    return { ...session, user: { id: new_user.id, name: new_user.name, email: new_user.email } }
+    return session
   }
 
   async forgotPassword({ email }: AuthServiceForgotPassword): Promise<AuthForgotPasswordResult> {
@@ -259,7 +292,7 @@ export class AuthService {
         variables: {
           user_name: user.name,
           reset_link: resetLink,
-          app_name: this.configService.get<string>('APP_NAME', 'Form System'),
+          app_name: this.configService.get<string>('APP_NAME', 'FormSystem'),
           expires_in: `${expiresInHours} hora${expiresInHours === 1 ? '' : 's'}`,
         },
       },
@@ -278,9 +311,9 @@ export class AuthService {
     const password_hash = await this.securityService.hash(password)
     const authMethod = await this.prisma.authMethod.findFirst({ where: { user_id: resetToken.user_id, type: AUTH_METHOD.PASSWORD } })
 
-    authMethod ?
-    await this.prisma.authMethod.update({ where: { id: authMethod.id }, data: { password_hash } }) :
-    await this.prisma.authMethod.create({ data: { user_id: resetToken.user_id, type: AUTH_METHOD.PASSWORD, password_hash } })
+    authMethod
+      ? await this.prisma.authMethod.update({ where: { id: authMethod.id }, data: { password_hash } })
+      : await this.prisma.authMethod.create({ data: { user_id: resetToken.user_id, type: AUTH_METHOD.PASSWORD, password_hash } })
 
     await this.prisma.passwordResetToken.updateMany({
       where: { user_id: resetToken.user_id, used_at: null },

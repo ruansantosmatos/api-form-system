@@ -6,19 +6,11 @@ export type CreateSessionType = {
   rememberMe?: boolean
 }
 
-export type SessionUser = {
-  id: number
-  name: string
-  email: string
-}
-
 export type SessionCreateResult = {
   session_id: number
   access_token: string
   refresh_token: string
 }
-
-export type SessionWithUserResult = SessionCreateResult & { user: SessionUser }
 
 export type SessionRefreshType = {
   sessionId: number

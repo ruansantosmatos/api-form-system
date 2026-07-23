@@ -15,6 +15,8 @@ import { OAuthProviderRedirectGuard } from 'src/shared/guards/oauth-provider.gua
 import { createRegisterSchema, type CreateRegisterDto } from './dto/auth-register.dto'
 import { authForgotPasswordSchema, type AuthForgotPasswordDto } from './dto/auth-forgot-password.dto'
 import { authResetPasswordSchema, type AuthResetPasswordDto } from './dto/auth-reset-password.dto'
+import { authVerifyTwoFactorSchema, type AuthVerifyTwoFactorDto } from './dto/auth-verify-two-factor.dto'
+import { Throttle } from '@nestjs/throttler'
 import { Controller, Get, Injectable, Post, Query, Req, Res, UseGuards } from '@nestjs/common'
 
 @Injectable()
@@ -79,13 +81,35 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async login(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(authLoginSchema) body: AuthLoginDto) {
+    const result = await this.authService.login({ client, data: body })
+
+    if ('requires_2fa' in result) return res.status(200).json(result)
+
     const cookieOptions = getCookieOptions()
-    const { session_id, access_token, refresh_token } = await this.authService.login({ client, data: body })
+    const { session_id, access_token, refresh_token } = result
     const refreshMaxAge = body.remember_me ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: refreshMaxAge })
+
+    res.cookie('session_id', session_id, cookieOptions)
+    res.status(200).json({ session: { session_id } })
+  }
+
+  @Post('login/verify-2fa')
+  @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
+  async verifyTwoFactor(
+    @Res() res: Response,
+    @ClientInfo() client: ClientInfoType,
+    @ZodBody(authVerifyTwoFactorSchema) body: AuthVerifyTwoFactorDto,
+  ) {
+    const cookieOptions = getCookieOptions()
+    const { session_id, access_token, refresh_token } = await this.authService.verifyTwoFactorChallenge({ client, ...body })
+
+    res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
+    res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT })
 
     res.cookie('session_id', session_id, cookieOptions)
     res.status(200).json({ session: { session_id } })
@@ -149,7 +173,7 @@ export class AuthController {
   async googleLogin(@Res() res: Response, @Query('code') code: string, @ClientInfo() client: ClientInfoType, @Req() req: Request) {
     const cookieOptions = getCookieOptions()
     const clientUrl = this.configService.get<string>('CLIENT_URL')
-    
+
     const rememberMe = req.cookies['oauth_remember_me'] === 'true'
     const redirect: string = req.cookies['oauth_redirect'] ?? '/home'
 
