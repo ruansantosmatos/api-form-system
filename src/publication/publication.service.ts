@@ -134,7 +134,7 @@ export class PublicationService {
     const { form, id, hash: pubHash, form_id, published_at, is_active } = publication
     const { config, sections, fields, ...formInfo } = form
 
-    const toPublicField = (f: typeof fields[number]): PublicField => ({
+    const toPublicField = (f: (typeof fields)[number]): PublicField => ({
       id: f.id,
       label: f.label,
       required: f.required,

@@ -24,6 +24,7 @@ model User {
   verificationCodes   VerificationCode[]
   aiCredentials       UserAiCredential[]
   aiModelConfigs      UserAiModelConfig[]
+  aiUsageLogs         AiUsageLog[]
 
   @@map("users")
 }
@@ -96,6 +97,7 @@ model AiProvider {
   updated_at  DateTime?
   models      AiModel[]
   credentials UserAiCredential[]
+  usageLogs   AiUsageLog[]
 
   @@map("ai_providers")
 }
@@ -117,6 +119,7 @@ model AiModel {
   updated_at              DateTime?
   provider                AiProvider          @relation(fields: [provider_id], references: [id])
   configs                 UserAiModelConfig[]
+  usageLogs               AiUsageLog[]
 
   @@unique([provider_id, slug])
   @@map("ai_models")
@@ -160,13 +163,32 @@ model UserAiModelConfig {
   @@map("user_ai_model_configs")
 }
 
+model AiUsageLog {
+  id             Int        @id() @default(autoincrement())
+  user_id        Int
+  provider_id    Int
+  model_id       Int
+  input_tokens   Int
+  output_tokens  Int
+  estimated_cost Decimal    @db.Decimal(12, 6)
+  status         String     @db.VarChar(20)
+  error_message  String?    @db.Text
+  created_at     DateTime?  @default(now())
+  user           User       @relation(fields: [user_id], references: [id])
+  provider       AiProvider @relation(fields: [provider_id], references: [id])
+  model          AiModel    @relation(fields: [model_id], references: [id])
+
+  @@index([user_id, created_at])
+  @@map("ai_usage_logs")
+}
+
 model TwoFactorAuth {
-  id           Int       @id() @default(autoincrement())
-  user_id      Int       @unique()
-  secret       String    @db.VarChar(255)
-  is_enabled   Boolean   @default(false)
+  id           Int                   @id() @default(autoincrement())
+  user_id      Int                   @unique()
+  secret       String                @db.VarChar(255)
+  is_enabled   Boolean               @default(false)
   confirmed_at DateTime?
-  created_at   DateTime? @default(now())
+  created_at   DateTime?             @default(now())
   updated_at   DateTime?
   user         User                  @relation(fields: [user_id], references: [id])
   backupCodes  TwoFactorBackupCode[]
@@ -175,11 +197,11 @@ model TwoFactorAuth {
 }
 
 model TwoFactorBackupCode {
-  id            Int       @id() @default(autoincrement())
+  id            Int           @id() @default(autoincrement())
   two_factor_id Int
-  code_hash     String    @db.VarChar(255)
+  code_hash     String        @db.VarChar(255)
   used_at       DateTime?
-  created_at    DateTime? @default(now())
+  created_at    DateTime?     @default(now())
   twoFactorAuth TwoFactorAuth @relation(fields: [two_factor_id], references: [id])
 
   @@map("two_factor_backup_codes")
@@ -200,21 +222,21 @@ model VerificationCode {
 }
 
 model Form {
-  id          Int           @id() @default(autoincrement())
-  user_id     Int
-  title       String        @db.VarChar(100)
-  description String        @db.LongText
-  published      Boolean       @default(false)
-  is_favorite    Boolean       @default(false)
-  created_at     DateTime?     @default(now())
+  id             Int              @id() @default(autoincrement())
+  user_id        Int
+  title          String           @db.VarChar(100)
+  description    String           @db.LongText
+  published      Boolean          @default(false)
+  is_favorite    Boolean          @default(false)
+  created_at     DateTime?        @default(now())
   updated_at     DateTime?
   last_opened_at DateTime?
-  user        User            @relation(fields: [user_id], references: [id])
-  sections    FormSection[]
-  fields      FormField[]
-  submissions FormSubmission[]
-  publication FormPublication?
-  config      FormConfig?
+  user           User             @relation(fields: [user_id], references: [id])
+  sections       FormSection[]
+  fields         FormField[]
+  submissions    FormSubmission[]
+  publication    FormPublication?
+  config         FormConfig?
 
   @@map("forms")
 }
@@ -310,10 +332,10 @@ model FormField {
   created_at  DateTime? @default(now())
   updated_at  DateTime?
 
-  form     Form?         @relation(fields: [form_id], references: [id])
-  section  FormSection?  @relation(fields: [section_id], references: [id])
-  category FieldCategory @relation(fields: [category_id], references: [id])
-  type     FieldType     @relation(fields: [type_id], references: [id])
+  form     Form?                  @relation(fields: [form_id], references: [id])
+  section  FormSection?           @relation(fields: [section_id], references: [id])
+  category FieldCategory          @relation(fields: [category_id], references: [id])
+  type     FieldType              @relation(fields: [type_id], references: [id])
   options  FormFieldOption[]
   answers  FormSubmissionAnswer[]
   image    Image?
@@ -358,15 +380,14 @@ model FormSubmissionAnswerOption {
 }
 
 model FormFieldOption {
-  id         Int       @id @default(autoincrement())
-  field_id   Int
-  label      String    @db.VarChar(150)
-  value      String    @db.VarChar(150)
-  created_at DateTime? @default(now())
-  updated_at DateTime?
-  field          FormField                    @relation(fields: [field_id], references: [id])
-  answerOptions  FormSubmissionAnswerOption[]
+  id            Int                          @id @default(autoincrement())
+  field_id      Int
+  label         String                       @db.VarChar(150)
+  value         String                       @db.VarChar(150)
+  created_at    DateTime?                    @default(now())
+  updated_at    DateTime?
+  field         FormField                    @relation(fields: [field_id], references: [id])
+  answerOptions FormSubmissionAnswerOption[]
 
   @@map("form_field_options")
 }
-

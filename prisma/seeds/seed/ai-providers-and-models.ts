@@ -172,11 +172,12 @@ const providers: ProviderSeed[] = [
       {
         slug: 'deepseek-reasoner',
         name: 'DeepSeek Reasoner',
-        description: 'Otimizado para raciocínio em múltiplas etapas.',
+        description: 'Otimizado para raciocínio em múltiplas etapas. Não aceita o parâmetro temperature.',
         context_window: 128_000,
         max_output_tokens: 65_536,
         input_cost_per_million: 0.55,
         output_cost_per_million: 2.19,
+        supports_temperature: false,
       },
     ],
   },

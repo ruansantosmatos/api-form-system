@@ -6,7 +6,7 @@ import { OtpServiceCreate, OtpServiceVerify } from '../types/otp-service.type'
 
 @Injectable()
 export class OtpService {
-  constructor(private readonly prisma: PrismaClientService) { }
+  constructor(private readonly prisma: PrismaClientService) {}
 
   private hash(code: string): string {
     return createHash('sha256').update(code).digest('hex')
@@ -28,7 +28,7 @@ export class OtpService {
 
   async verify({ user_id, purpose, code }: OtpServiceVerify): Promise<void> {
     const now = new Date()
-    
+
     const verificationCode = await this.prisma.verificationCode.findFirst({
       where: { user_id, purpose, used_at: null },
       orderBy: { created_at: 'desc' },

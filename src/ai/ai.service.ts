@@ -110,7 +110,6 @@ export class AiService {
     const models = await this.prisma.aiModel.findMany({ where: { provider_id }, select: { id: true } })
 
     await this.prisma.$transaction(async tx => {
-      // A model of this provider can no longer be used without its API key.
       await tx.userAiModelConfig.updateMany({
         where: { user_id, is_active: true, model_id: { in: models.map(model => model.id) } },
         data: { is_active: false, updated_at: new Date() },
@@ -140,7 +139,6 @@ export class AiService {
     if (!credential) throw new BadRequestException('Add the provider API key before activating one of its models')
 
     return this.prisma.$transaction(async tx => {
-      // Only one model can be in use at a time.
       await tx.userAiModelConfig.updateMany({
         where: { user_id, is_active: true },
         data: { is_active: false, updated_at: new Date() },
