@@ -4,7 +4,7 @@ import { CryptoService } from 'src/shared/services/crypto.service'
 import { AiProviderError } from 'src/ai/providers/ai-provider.error'
 import { AiProviderFactory } from 'src/ai/providers/ai-provider.factory'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
-import type { FieldCategoryWithTypes, FormGenerationServiceGenerate } from './interface/form.interface'
+import type { FieldCategoryWithTypes, FormGenerationServiceGenerate } from '../interface/form.interface'
 import type { AiGenerateFormOutput, FormGenerationPayload } from 'src/ai/interface/ai-generation.interface'
 import { buildFormGenerationSchema, buildFormGenerationSystemPrompt, type FormGenerationCategory } from 'src/ai/prompts/form-generation.prompt'
 import {
@@ -47,7 +47,7 @@ export class FormGenerationService {
     if (!credential) throw new BadRequestException(`No API key configured for ${provider.name}. Add one before generating a form.`)
 
     const categories = await this.prisma.fieldCategory.findMany({ include: { fieldTypes: true } })
-    
+
     if (categories.length === 0) throw new InternalServerErrorException('No field categories are configured')
 
     const generationCategories: FormGenerationCategory[] = categories.map(category => ({

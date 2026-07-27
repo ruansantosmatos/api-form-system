@@ -1,7 +1,8 @@
-import { FormService } from './form.service'
 import { Form } from 'src/generated/prisma/client'
-import { FormGenerationService } from './form-generation.service'
+import { FormService } from './services/form.service'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
+import { FormConfigService } from './services/form-config.service'
+import { FormGenerationService } from './services/form-generation.service'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
 import { ZodQuery } from 'src/shared/decorators/zod-query.decorator'
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator'
@@ -17,6 +18,7 @@ import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Pat
 export class FormController {
   constructor(
     private readonly formService: FormService,
+    private readonly formConfigService: FormConfigService,
     private readonly formGenerationService: FormGenerationService,
   ) {}
 
@@ -57,7 +59,7 @@ export class FormController {
   @Get(':form_id/config')
   @UseGuards(JwtAuthGuard)
   async getFormConfig(@Param('form_id', ParseIntPipe) form_id: number): Promise<FormConfig> {
-    return this.formService.getFormConfig({ form_id })
+    return this.formConfigService.getFormConfig({ form_id })
   }
 
   @Patch(':form_id/config')
@@ -67,7 +69,7 @@ export class FormController {
     @CurrentUser() user_id: number,
     @ZodBody(updateFormConfigSchema) body: UpdateFormConfigDto,
   ): Promise<FormConfig> {
-    return this.formService.updateFormConfig({ form_id, user_id, data: body })
+    return this.formConfigService.updateFormConfig({ form_id, user_id, data: body })
   }
 
   @Patch(':form_id/favorite')
