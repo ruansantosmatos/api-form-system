@@ -1,10 +1,13 @@
 import type { Response, Request } from 'express'
-import { AuthService } from './auth.service'
 import { ConfigService } from '@nestjs/config'
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
+import { AuthOAuthService } from './services/auth-oauth.service'
 import { ZodBody } from '../shared/decorators/zod-body.decorator'
 import { TOKENS_EXPIRES } from 'src/shared/consts/tokens-expires'
+import { AuthSessionService } from './services/auth-session.service'
 import { getCookieOptions } from 'src/shared/utils/getCookieOptions'
+import { AuthPasswordService } from './services/auth-password.service'
 import { type ClientInfoType } from 'src/shared/types/client-info.type'
 import { ClientInfo } from 'src/shared/decorators/client-info.decorator'
 import { authLoginSchema, type AuthLoginDto } from './dto/auth-login.dto'
@@ -16,22 +19,23 @@ import { createRegisterSchema, type CreateRegisterDto } from './dto/auth-registe
 import { authForgotPasswordSchema, type AuthForgotPasswordDto } from './dto/auth-forgot-password.dto'
 import { authResetPasswordSchema, type AuthResetPasswordDto } from './dto/auth-reset-password.dto'
 import { authVerifyTwoFactorSchema, type AuthVerifyTwoFactorDto } from './dto/auth-verify-two-factor.dto'
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
 import { Controller, Get, Injectable, Post, Query, Req, Res, UseGuards } from '@nestjs/common'
 
 @Injectable()
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly authOAuthService: AuthOAuthService,
+    private readonly authSessionService: AuthSessionService,
+    private readonly authPasswordService: AuthPasswordService,
   ) {}
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(@Res() res: Response, @CurrentUser() user_id: number) {
     const cookieOptions = getCookieOptions()
-    const { user } = await this.authService.me(user_id)
+    const { user } = await this.authSessionService.me(user_id)
 
     res.cookie('user', JSON.stringify(user), cookieOptions)
     res.setHeader('Cache-Control', 'no-store')
@@ -41,7 +45,7 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   logout(@ZodBody(authLogoutSchema) body: AuthLogoutDto, @CurrentUser() user_id: number) {
-    return this.authService.logout({ session_id: body.session_id, user_id })
+    return this.authSessionService.logout({ session_id: body.session_id, user_id })
   }
 
   @Get('github')
@@ -52,7 +56,7 @@ export class AuthController {
     @Query('redirect') redirect?: string,
   ) {
     const cookieOptions = getCookieOptions()
-    const { url, state } = this.authService.redirectToGithub()
+    const { url, state } = this.authOAuthService.redirectToGithub()
 
     res.cookie('oauth_state', state, cookieOptions)
     if (errorRedirect?.startsWith('/')) res.cookie('oauth_error_redirect', errorRedirect, cookieOptions)
@@ -70,7 +74,7 @@ export class AuthController {
     @Query('redirect') redirect?: string,
   ) {
     const cookieOptions = getCookieOptions()
-    const { url, state } = this.authService.redirectToGoogle()
+    const { url, state } = this.authOAuthService.redirectToGoogle()
 
     res.cookie('oauth_state', state, cookieOptions)
     if (errorRedirect?.startsWith('/')) res.cookie('oauth_error_redirect', errorRedirect, cookieOptions)
@@ -84,7 +88,7 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async login(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(authLoginSchema) body: AuthLoginDto) {
-    const result = await this.authService.login({ client, data: body })
+    const result = await this.authPasswordService.login({ client, data: body })
 
     if ('requires_2fa' in result) return res.status(200).json(result)
 
@@ -108,7 +112,7 @@ export class AuthController {
     @ZodBody(authVerifyTwoFactorSchema) body: AuthVerifyTwoFactorDto,
   ) {
     const cookieOptions = getCookieOptions()
-    const { session_id, access_token, refresh_token } = await this.authService.verifyTwoFactorChallenge({ client, ...body })
+    const { session_id, access_token, refresh_token } = await this.authPasswordService.verifyTwoFactorChallenge({ client, ...body })
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT })
@@ -122,7 +126,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async register(@Res() res: Response, @ClientInfo() client: ClientInfoType, @ZodBody(createRegisterSchema) body: CreateRegisterDto) {
     const cookieOptions = getCookieOptions()
-    const { session_id, access_token, refresh_token } = await this.authService.register({ client, data: body })
+    const { session_id, access_token, refresh_token } = await this.authPasswordService.register({ client, data: body })
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT })
@@ -135,20 +139,20 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 15 * 60 * 1000 } })
   async forgotPassword(@ZodBody(authForgotPasswordSchema) body: AuthForgotPasswordDto) {
-    return this.authService.forgotPassword(body)
+    return this.authPasswordService.forgotPassword(body)
   }
 
   @Post('reset-password')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60 * 1000 } })
   async resetPassword(@ZodBody(authResetPasswordSchema) body: AuthResetPasswordDto) {
-    return this.authService.resetPassword(body)
+    return this.authPasswordService.resetPassword(body)
   }
 
   @Post('refresh')
   async refresh(@Res() res: Response, @ZodBody(authRefreshSchema) body: AuthRefreshDto) {
     const cookieOptions = getCookieOptions()
-    const { session_id, access_token, refresh_token } = await this.authService.refresh(body.session_id, body.refresh_token)
+    const { session_id, access_token, refresh_token } = await this.authSessionService.refresh(body.session_id, body.refresh_token)
 
     res.cookie('access_token', access_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.ACCESS_TOKEN })
     res.cookie('refresh_token', refresh_token, { ...cookieOptions, maxAge: TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT })
@@ -163,7 +167,7 @@ export class AuthController {
     const rememberMe = req.cookies['oauth_remember_me'] === 'true'
     const redirect: string = req.cookies['oauth_redirect'] ?? '/home'
 
-    const { session_id, access_token, refresh_token } = await this.authService.authenticateWithGithub({ code, client, rememberMe })
+    const { session_id, access_token, refresh_token } = await this.authOAuthService.authenticateWithGithub({ code, client, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
     res.clearCookie('oauth_redirect', cookieOptions)
@@ -185,7 +189,7 @@ export class AuthController {
     const rememberMe = req.cookies['oauth_remember_me'] === 'true'
     const redirect: string = req.cookies['oauth_redirect'] ?? '/home'
 
-    const { session_id, access_token, refresh_token } = await this.authService.authenticateWithGoogle({ client, code, rememberMe })
+    const { session_id, access_token, refresh_token } = await this.authOAuthService.authenticateWithGoogle({ client, code, rememberMe })
     const refreshMaxAge = rememberMe ? TOKENS_EXPIRES.REFRESH_TOKEN.REMEMBER_ME : TOKENS_EXPIRES.REFRESH_TOKEN.DEFAULT
 
     res.clearCookie('oauth_redirect', cookieOptions)
