@@ -1,31 +1,16 @@
-import { randomBytes } from 'crypto'
-import { FormConfig, FormPublication } from 'src/generated/prisma/client'
+import { FormConfig } from 'src/generated/prisma/client'
+import { GoneException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
-import { ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common'
 import type {
   PublicField,
   FormConfigStatus,
   FormPublicResponse,
-  PublicationServicePublish,
   PublicationServiceGetByHash,
-  PublicationServiceGetPublication,
-  PublicationServiceUpdatePublication,
-  PublicationServiceDeactivatePublication,
-} from './interface/publication.interface'
+} from '../interface/publication.interface'
 
 @Injectable()
-export class PublicationService {
+export class PublicFormService {
   constructor(private readonly prisma: PrismaClientService) {}
-
-  private generateHash(): string {
-    return randomBytes(32).toString('hex')
-  }
-
-  private async findPublication(form_id: number): Promise<FormPublication> {
-    const publication = await this.prisma.formPublication.findUnique({ where: { form_id } })
-    if (!publication) throw new NotFoundException('Publication not found')
-    return publication
-  }
 
   private computeConfigStatus(config: FormConfig | null, submissionCount: number, is_active: boolean): FormConfigStatus {
     if (!config) {
@@ -57,34 +42,6 @@ export class PublicationService {
       single_response: config.single_response_per_user,
       accepting_responses: is_active && is_open && !max_reached,
     }
-  }
-
-  async publish({ form_id }: PublicationServicePublish): Promise<FormPublication> {
-    const existing = await this.prisma.formPublication.findUnique({ where: { form_id } })
-    if (existing) throw new ConflictException('This form has already been published')
-
-    return this.prisma.$transaction(async tx => {
-      await tx.form.update({ where: { id: form_id }, data: { published: true } })
-      return tx.formPublication.create({ data: { form_id, hash: this.generateHash() } })
-    })
-  }
-
-  async getPublication({ form_id }: PublicationServiceGetPublication): Promise<FormPublication | null> {
-    return this.prisma.formPublication.findUnique({ where: { form_id } })
-  }
-
-  async updatePublication({ form_id, data }: PublicationServiceUpdatePublication): Promise<FormPublication> {
-    await this.findPublication(form_id)
-    return this.prisma.formPublication.update({ where: { form_id }, data })
-  }
-
-  async deactivatePublication({ form_id }: PublicationServiceDeactivatePublication): Promise<FormPublication> {
-    await this.findPublication(form_id)
-
-    return this.prisma.$transaction(async tx => {
-      await tx.form.update({ where: { id: form_id }, data: { published: false } })
-      return tx.formPublication.update({ where: { form_id }, data: { is_active: false } })
-    })
   }
 
   async getByHash({ hash }: PublicationServiceGetByHash): Promise<FormPublicResponse> {
