@@ -1,5 +1,5 @@
 import { Form } from 'src/generated/prisma/client'
-import { AiUsageService } from 'src/ai/ai-usage.service'
+import { AiUsageService } from 'src/ai/services/ai-usage.service'
 import { CryptoService } from 'src/shared/services/crypto.service'
 import { AiProviderError } from 'src/ai/providers/ai-provider.error'
 import { AiProviderFactory } from 'src/ai/providers/ai-provider.factory'

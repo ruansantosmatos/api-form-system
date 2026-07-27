@@ -1,18 +1,36 @@
 import { Module } from '@nestjs/common'
-import { AiService } from './ai.service'
 import { AiController } from './ai.controller'
-import { AiUsageService } from './ai-usage.service'
-import { TokenModule } from 'src/shared/modules/token.module'
-import { GoogleAdapter } from './providers/google.adapter'
 import { OpenAiAdapter } from './providers/openai.adapter'
+import { GoogleAdapter } from './providers/google.adapter'
+import { AiUsageService } from './services/ai-usage.service'
+import { TokenModule } from 'src/shared/modules/token.module'
 import { DeepSeekAdapter } from './providers/deepseek.adapter'
+import { AiCatalogService } from './services/ai-catalog.service'
 import { AnthropicAdapter } from './providers/anthropic.adapter'
 import { AiProviderFactory } from './providers/ai-provider.factory'
+import { AiCredentialService } from './services/ai-credential.service'
+import { AiModelConfigService } from './services/ai-model-config.service'
 
 @Module({
   imports: [TokenModule],
-  providers: [AiService, AiUsageService, AiProviderFactory, OpenAiAdapter, AnthropicAdapter, GoogleAdapter, DeepSeekAdapter],
   controllers: [AiController],
-  exports: [AiService, AiUsageService, AiProviderFactory],
+  exports: [
+    AiCatalogService, 
+    AiCredentialService, 
+    AiModelConfigService, 
+    AiUsageService, 
+    AiProviderFactory
+  ],
+  providers: [
+    AiCatalogService,
+    AiCredentialService,
+    AiModelConfigService,
+    AiUsageService,
+    AiProviderFactory,
+    OpenAiAdapter,
+    AnthropicAdapter,
+    GoogleAdapter,
+    DeepSeekAdapter,
+  ],
 })
 export class AiModule {}

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { AI_USAGE_STATUS } from 'src/shared/consts/ai-usage-status'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
-import type { AiUsageLogErrorInput, AiUsageLogSuccessInput } from './interface/ai-generation.interface'
+import type { AiUsageLogErrorInput, AiUsageLogSuccessInput } from '../interface/ai-generation.interface'
 
 @Injectable()
 export class AiUsageService {
