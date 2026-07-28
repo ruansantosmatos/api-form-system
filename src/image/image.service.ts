@@ -50,7 +50,7 @@ export class ImageService {
     if (existing) await this.r2.deleteObject({ key: existing.key })
 
     const key = this.buildObjectKey('fields', field_id, data.file_name)
-    
+
     const image = await this.prisma.image.upsert({
       where: { field_id },
       create: { field_id, key, mime_type: data.content_type, size: data.size },
@@ -85,7 +85,7 @@ export class ImageService {
     await this.findSectionInForm(section_id, form_id)
 
     const existing = await this.prisma.image.findUnique({ where: { section_id } })
-    
+
     if (existing) await this.r2.deleteObject({ key: existing.key })
 
     const key = this.buildObjectKey('sections', section_id, data.file_name)

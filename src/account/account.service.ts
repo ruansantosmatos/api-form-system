@@ -127,7 +127,7 @@ export class AccountService {
 
     const { codes, hashes } = await this.totpService.generateBackupCodes()
     await this.prisma.twoFactorBackupCode.deleteMany({ where: { two_factor_id: twoFactorAuth.id } })
-    
+
     await this.prisma.twoFactorBackupCode.createMany({
       data: hashes.map(code_hash => ({ two_factor_id: twoFactorAuth.id, code_hash })),
     })

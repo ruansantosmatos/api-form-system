@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { AiModule } from './ai/ai.module'
 import { AuthModule } from './auth/auth.module'
 import { FormModule } from './form/form.module'
 import { FieldModule } from './field/field.module'
@@ -8,6 +9,7 @@ import { AccountModule } from './account/account.module'
 import { R2Module } from './shared/modules/r2.module'
 import { SectionModule } from './section/section.module'
 import { MailModule } from './shared/modules/mail.module'
+import { CryptoModule } from './shared/modules/crypto.module'
 import { SecurityModule } from './shared/modules/security.module'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { SubmissionModule } from './submission/submission.module'
@@ -18,6 +20,7 @@ import { PrismaClientModule } from './shared/modules/prisma-client.module'
   controllers: [],
   providers: [],
   imports: [
+    AiModule,
     AuthModule,
     FormModule,
     FieldModule,
@@ -27,6 +30,7 @@ import { PrismaClientModule } from './shared/modules/prisma-client.module'
     SubmissionModule,
     PublicationModule,
     SecurityModule,
+    CryptoModule,
     PrismaClientModule,
     MailModule,
     R2Module,

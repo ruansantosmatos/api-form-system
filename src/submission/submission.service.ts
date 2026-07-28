@@ -301,11 +301,9 @@ export class SubmissionService {
       })
 
       return { success: true, message: `Export sent to ${user.email}` }
-    } 
-    catch (error) {
+    } catch (error) {
       return { success: false, message: 'Failed to export submissions' }
-    } 
-    finally {
+    } finally {
       if (filePath) await rm(filePath, { force: true })
     }
   }
