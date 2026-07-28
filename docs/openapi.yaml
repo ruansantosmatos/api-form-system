@@ -120,6 +120,8 @@ components:
       $ref: './schemas/form.yaml#/FormPaginatedResponse'
     CreateFormRequest:
       $ref: './schemas/form.yaml#/CreateFormRequest'
+    GenerateFormRequest:
+      $ref: './schemas/form.yaml#/GenerateFormRequest'
     UpdateFormRequest:
       $ref: './schemas/form.yaml#/UpdateFormRequest'
     FormConfig:
@@ -244,6 +246,8 @@ paths:
 
   /forms:
     $ref: './paths/form.yaml#/root'
+  /forms/generate:
+    $ref: './paths/form.yaml#/generate'
   /forms/{form_id}:
     $ref: './paths/form.yaml#/byId'
   /forms/{form_id}/config:

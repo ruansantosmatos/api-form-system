@@ -7,29 +7,15 @@ import type {
   FieldServiceCreateFormField,
   FieldServiceUpdateFormFields,
   FieldServiceDeleteFormField,
-  FieldServiceGetFieldOptions,
-  FieldServiceCreateFieldOption,
-  FieldServiceUpdateFieldOption,
-  FieldServiceDeleteFieldOption,
   FieldServiceCloneFormField,
-  FieldCategoryWithTypes,
-} from './interface/field.interface'
+} from '../interface/field.interface'
 
 @Injectable()
-export class FieldService {
+export class FormFieldService {
   constructor(
     private readonly prisma: PrismaClientService,
     private readonly r2: R2Service,
   ) {}
-
-  private async findFieldInForm(field_id: number, form_id: number) {
-    const field = await this.prisma.formField.findFirst({
-      where: { id: field_id, OR: [{ form_id }, { section: { form_id } }] },
-    })
-
-    if (!field) throw new NotFoundException('Field not found')
-    return field
-  }
 
   private async cloneOptionsForField(tx: Prisma.TransactionClient, options: FormFieldOption[], field_id: number): Promise<void> {
     if (options.length === 0) return
@@ -52,16 +38,6 @@ export class FieldService {
 
     if (category_id !== undefined && fieldType && fieldType.category_id !== category_id)
       throw new UnprocessableEntityException('Field type does not belong to category')
-  }
-
-  async getFieldCategories(): Promise<FieldCategoryWithTypes[]> {
-    return this.prisma.fieldCategory.findMany({
-      select: {
-        id: true,
-        name: true,
-        fieldTypes: { select: { id: true, name: true } },
-      },
-    })
   }
 
   async getFormFields({ form_id }: FieldServiceGetFormFields): Promise<FormField[]> {
@@ -157,33 +133,5 @@ export class FieldService {
       await this.cloneOptionsForField(tx, options, cloned.id)
       return cloned
     })
-  }
-
-  async getFieldOptions({ form_id, field_id }: FieldServiceGetFieldOptions) {
-    await this.findFieldInForm(field_id, form_id)
-    return this.prisma.formFieldOption.findMany({ where: { field_id }, orderBy: { id: 'asc' } })
-  }
-
-  async createFieldOption({ form_id, field_id, data }: FieldServiceCreateFieldOption) {
-    await this.findFieldInForm(field_id, form_id)
-    return this.prisma.formFieldOption.create({ data: { ...data, field_id } })
-  }
-
-  async updateFieldOption({ form_id, field_id, option_id, data }: FieldServiceUpdateFieldOption) {
-    await this.findFieldInForm(field_id, form_id)
-
-    const option = await this.prisma.formFieldOption.findUnique({ where: { id: option_id, field_id } })
-    if (!option) throw new NotFoundException('Option not found')
-
-    return this.prisma.formFieldOption.update({ where: { id: option_id }, data: { ...data, updated_at: new Date() } })
-  }
-
-  async deleteFieldOption({ form_id, field_id, option_id }: FieldServiceDeleteFieldOption) {
-    await this.findFieldInForm(field_id, form_id)
-
-    const option = await this.prisma.formFieldOption.findUnique({ where: { id: option_id, field_id } })
-    if (!option) throw new NotFoundException('Option not found')
-
-    await this.prisma.formFieldOption.delete({ where: { id: option_id } })
   }
 }

@@ -1,18 +1,22 @@
 import { FormPublication } from 'src/generated/prisma/client'
-import { PublicationService } from './publication.service'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
+import { PublicFormService } from './services/public-form.service'
+import { PublicationService } from './services/publication.service'
 import { type FormPublicResponse } from './interface/publication.interface'
 import { updatePublicationSchema, type UpdatePublicationDto } from './dto/update-publication.dto'
 import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common'
 
 @Controller('forms')
 export class PublicationController {
-  constructor(private readonly publicationService: PublicationService) {}
+  constructor(
+    private readonly publicationService: PublicationService,
+    private readonly publicFormService: PublicFormService,
+  ) {}
 
   @Get('publication/:hash')
   async getByHash(@Param('hash') hash: string): Promise<FormPublicResponse> {
-    return this.publicationService.getByHash({ hash })
+    return this.publicFormService.getByHash({ hash })
   }
 
   @Post(':form_id/publication')

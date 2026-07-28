@@ -85,6 +85,64 @@ root:
             schema:
               $ref: '../schemas/common.yaml#/ValidationErrorResponse'
 
+generate:
+  post:
+    tags: [Forms]
+    summary: Generate a form from a prompt using AI
+    description: >
+      Uses the caller's active AI model config and stored provider API key to generate a Form
+      with sections, fields, and options, and persists it in the same shape as POST /forms.
+      Token usage and cost are logged (AiUsageLog) and the credential's last_used_at is updated
+      on success; failures are logged with the error message.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/form.yaml#/GenerateFormRequest'
+    responses:
+      '201':
+        description: Form generated and created.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/form.yaml#/Form'
+      '400':
+        description: >
+          Validation error, no active AI model configured, or no API key stored for the active
+          model's provider.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '422':
+        description: The provider returned output that could not be mapped to a valid form (unknown field category/type, or no sections).
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '429':
+        description: The provider's rate limit was hit.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '504':
+        description: The provider did not respond in time.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
 byId:
   get:
     tags: [Forms]
