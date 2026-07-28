@@ -1,0 +1,288 @@
+providers:
+  get:
+    tags: [AI]
+    summary: List AI providers, their models, and the user's credentials
+    description: >
+      Returns the seeded catalog of the four supported providers with their active models. Each
+      provider carries the authenticated user's credential (masked) when one exists, and each model
+      is flagged with is_in_use so the UI can show which single model is currently active.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '200':
+        description: Catalog for the authenticated user.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/ai.yaml#/AiProvider'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+credentials:
+  get:
+    tags: [AI]
+    summary: List the user's provider API keys
+    description: Keys are returned masked — only the last four characters are exposed.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '200':
+        description: Stored credentials.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/ai.yaml#/AiCredential'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+providerCredential:
+  parameters:
+    - name: provider_id
+      in: path
+      required: true
+      schema:
+        type: integer
+  put:
+    tags: [AI]
+    summary: Add or replace the API key for a provider
+    description: >
+      One credential per user per provider — calling this again replaces the stored key. The key is
+      encrypted with AES-256-GCM before being written and is only decrypted server-side when a model
+      of that provider is used. Only the key format is validated; the provider is not contacted.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/ai.yaml#/UpsertCredentialRequest'
+    responses:
+      '200':
+        description: Credential stored.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/ai.yaml#/AiCredential'
+      '400':
+        description: The API key does not match the provider's expected format.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '404':
+        description: Provider not found or inactive.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+  delete:
+    tags: [AI]
+    summary: Remove the API key for a provider
+    description: >
+      If the model currently in use belongs to this provider, it is deactivated in the same
+      transaction — a model cannot stay in use without its key.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '204':
+        description: Credential removed.
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '404':
+        description: No credential stored for this provider.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+activeModel:
+  get:
+    tags: [AI]
+    summary: Get the model currently in use
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '200':
+        description: The active config, or active_model null when no model is in use.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/ai.yaml#/AiActiveModelResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+  delete:
+    tags: [AI]
+    summary: Stop using the current model
+    description: Clears the active flag. The model's saved settings are kept for when it is activated again.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '200':
+        description: Model deactivated.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/MessageResponse'
+            example:
+              message: AI model deactivated successfully.
+      '400':
+        description: No AI model is currently in use.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+activateModel:
+  parameters:
+    - name: model_id
+      in: path
+      required: true
+      schema:
+        type: integer
+  post:
+    tags: [AI]
+    summary: Put a model in use
+    description: >
+      Deactivates whatever model was in use and activates this one — only a single model can be in
+      use at a time. Requires an API key for the model's provider. On first activation a config is
+      created with max_output_tokens defaulted to the model's ceiling.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '201':
+        description: Model is now in use.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/ai.yaml#/AiModelConfig'
+      '400':
+        description: No API key stored for the model's provider.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '404':
+        description: Model not found or inactive.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+
+modelConfig:
+  parameters:
+    - name: model_id
+      in: path
+      required: true
+      schema:
+        type: integer
+  get:
+    tags: [AI]
+    summary: Get the user's settings for a model
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    responses:
+      '200':
+        description: Stored settings.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/ai.yaml#/AiModelConfig'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '404':
+        description: The user has no settings stored for this model yet.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+  patch:
+    tags: [AI]
+    summary: Update the user's settings for a model
+    description: >
+      Creates the settings row if it does not exist yet, so a model can be configured before being
+      activated. Updating settings does not change which model is in use.
+    security:
+      - bearerAuth: []
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/ai.yaml#/UpdateModelConfigRequest'
+    responses:
+      '200':
+        description: Settings saved.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/ai.yaml#/AiModelConfig'
+      '400':
+        description: max_output_tokens above the model's ceiling, or temperature sent to a model that does not accept it.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '401':
+        description: Access token is missing, invalid, or expired.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'
+      '404':
+        description: Model not found or inactive.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/common.yaml#/ErrorResponse'

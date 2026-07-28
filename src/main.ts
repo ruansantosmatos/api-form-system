@@ -17,14 +17,13 @@ async function bootstrap() {
   const openapiDocument = (await SwaggerParser.bundle(openapiPath)) as OpenAPIV3.Document
 
   if (process.env.API_URL) openapiDocument.servers = [{ url: process.env.API_URL, description: 'Production' }, ...(openapiDocument.servers ?? [])]
-  
+
   app.enableCors({ origin: allowedOrigins, credentials: true })
   app.use(cookieParser())
 
-  isProduction ?
-  app.use('/docs', docsBasicAuth, swaggerUi.serve, swaggerUi.setup(openapiDocument))
-  :
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiDocument))
+  isProduction
+    ? app.use('/docs', docsBasicAuth, swaggerUi.serve, swaggerUi.setup(openapiDocument))
+    : app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiDocument))
 
   await app.listen(process.env.PORT as string)
 }

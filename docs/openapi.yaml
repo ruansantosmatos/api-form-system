@@ -16,6 +16,10 @@ tags:
     description: Registration, login, session refresh, OAuth, password recovery
   - name: Account
     description: Account security settings — recovery email and two-factor authentication (TOTP)
+  - name: AI
+    description: >
+      AI provider catalog, per-user API keys, and the single model in use with its settings.
+      All provider costs are billed to the user's own key.
   - name: Forms
     description: Form CRUD, config, and favorites
   - name: Sections
@@ -84,6 +88,21 @@ components:
       $ref: './schemas/account.yaml#/AccountTwoFactorSetupResponse'
     AccountTwoFactorConfirmResponse:
       $ref: './schemas/account.yaml#/AccountTwoFactorConfirmResponse'
+    AiProvider:
+      $ref: './schemas/ai.yaml#/AiProvider'
+    AiModel:
+      $ref: './schemas/ai.yaml#/AiModel'
+    AiCredential:
+      $ref: './schemas/ai.yaml#/AiCredential'
+    UpsertCredentialRequest:
+      $ref: './schemas/ai.yaml#/UpsertCredentialRequest'
+    AiModelConfig:
+      $ref: './schemas/ai.yaml#/AiModelConfig'
+    AiActiveModelResponse:
+      $ref: './schemas/ai.yaml#/AiActiveModelResponse'
+    UpdateModelConfigRequest:
+      $ref: './schemas/ai.yaml#/UpdateModelConfigRequest'
+
     MessageResponse:
       $ref: './schemas/common.yaml#/MessageResponse'
     ErrorResponse:
@@ -209,6 +228,19 @@ paths:
     $ref: './paths/account.yaml#/twoFactorConfirm'
   /account/2fa/disable:
     $ref: './paths/account.yaml#/twoFactorDisable'
+
+  /ai/providers:
+    $ref: './paths/ai.yaml#/providers'
+  /ai/credentials:
+    $ref: './paths/ai.yaml#/credentials'
+  /ai/providers/{provider_id}/credential:
+    $ref: './paths/ai.yaml#/providerCredential'
+  /ai/models/active:
+    $ref: './paths/ai.yaml#/activeModel'
+  /ai/models/{model_id}/activate:
+    $ref: './paths/ai.yaml#/activateModel'
+  /ai/models/{model_id}/config:
+    $ref: './paths/ai.yaml#/modelConfig'
 
   /forms:
     $ref: './paths/form.yaml#/root'

@@ -1,4 +1,4 @@
-import { Form, FormConfig } from 'src/generated/prisma/client'
+import { Form, FormConfig, Prisma } from 'src/generated/prisma/client'
 import type { CreateFormDto } from '../dto/create-form.dto'
 import type { UpdateFormDto } from '../dto/update-form.dto'
 import type { UpdateFormConfigDto } from '../dto/update-form-config.dto'
@@ -39,6 +39,13 @@ export interface FormServiceToggleFavorite {
 export interface FormServiceGetFormConfig {
   form_id: number
 }
+
+export interface FormGenerationServiceGenerate {
+  user_id: number
+  prompt: string
+}
+
+export type FieldCategoryWithTypes = Prisma.FieldCategoryGetPayload<{ include: { fieldTypes: true } }>
 
 export interface FormServiceUpdateFormConfig {
   form_id: number
