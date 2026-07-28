@@ -107,7 +107,7 @@ export class AuthPasswordService {
 
     await this.prisma.passwordResetToken.create({ data: { user_id: user.id, token_hash: tokenHash, expires_at: expiresAt } })
     const clientUrl = this.configService.get<string>('CLIENT_URL')
-    
+
     const resetLink = `${clientUrl}/reset?token=${token}`
     const expiresInHours = TOKENS_EXPIRES.PASSWORD_RESET / (60 * 60 * 1000)
 

@@ -65,7 +65,7 @@ export class AiModelConfigService {
     if (!count) throw new BadRequestException('No AI model is currently in use')
 
     await this.aiAccessService.syncAccess(user_id)
-    
+
     return { message: 'AI model deactivated successfully.' }
   }
 

@@ -1,14 +1,7 @@
 import { AiProviderError } from './ai-provider.error'
 import { parseFormGenerationPayload } from './parse-form-generation-payload'
 import type { AiGenerateFormInput, AiGenerateFormOutput, AiProviderAdapter } from '../interface/ai-generation.interface'
-import OpenAI, {
-  APIError,
-  RateLimitError,
-  APIConnectionError,
-  AuthenticationError,
-  PermissionDeniedError,
-  APIConnectionTimeoutError,
-} from 'openai'
+import OpenAI, { APIError, RateLimitError, APIConnectionError, AuthenticationError, PermissionDeniedError, APIConnectionTimeoutError } from 'openai'
 
 export type OpenAiCompatibleAdapterOptions = {
   /** Override for OpenAI-compatible providers (e.g. DeepSeek). Omit to hit the OpenAI API itself. */
@@ -39,16 +32,15 @@ export class OpenAiCompatibleAdapter implements AiProviderAdapter {
 
   async generateForm(input: AiGenerateFormInput): Promise<AiGenerateFormOutput> {
     const client = this.createClient(input.apiKey)
-    
-    const maxTokensParam = this.options.maxTokensField === 'max_tokens' ? 
-    { max_tokens: input.maxOutputTokens } : { max_completion_tokens: input.maxOutputTokens }
+
+    const maxTokensParam =
+      this.options.maxTokensField === 'max_tokens' ? { max_tokens: input.maxOutputTokens } : { max_completion_tokens: input.maxOutputTokens }
 
     const useJsonObject = this.options.responseFormatType === 'json_object'
-    
-    const systemPrompt = useJsonObject ? 
-    `${input.systemPrompt}\n\nRespond with a single JSON object that strictly follows this JSON schema:\n${JSON.stringify(input.responseSchema)}`
-    : 
-    input.systemPrompt
+
+    const systemPrompt = useJsonObject
+      ? `${input.systemPrompt}\n\nRespond with a single JSON object that strictly follows this JSON schema:\n${JSON.stringify(input.responseSchema)}`
+      : input.systemPrompt
 
     try {
       const response = await client.chat.completions.create({

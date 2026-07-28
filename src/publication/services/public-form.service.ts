@@ -1,12 +1,7 @@
 import { FormConfig } from 'src/generated/prisma/client'
 import { GoneException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
-import type {
-  PublicField,
-  FormConfigStatus,
-  FormPublicResponse,
-  PublicationServiceGetByHash,
-} from '../interface/publication.interface'
+import type { PublicField, FormConfigStatus, FormPublicResponse, PublicationServiceGetByHash } from '../interface/publication.interface'
 
 @Injectable()
 export class PublicFormService {
