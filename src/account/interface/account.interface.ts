@@ -4,6 +4,7 @@ export type AccountSettingsResult = {
   recovery_email_verified: boolean
   recovery_email_pending: string | null
   is_2fa_enabled: boolean
+  has_ai_access: boolean
 }
 
 export type AccountServiceUpdateRecoveryEmail = {

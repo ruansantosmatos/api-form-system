@@ -34,6 +34,7 @@ export class AccountService {
       recovery_email_verified: Boolean(accountSettings?.recovery_email_verified_at),
       recovery_email_pending: accountSettings?.recovery_email_pending ?? null,
       is_2fa_enabled: Boolean(twoFactorAuth?.is_enabled),
+      has_ai_access: Boolean(accountSettings?.has_ai_access),
     }
   }
 

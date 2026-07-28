@@ -1,7 +1,14 @@
 import { AiProviderError } from './ai-provider.error'
 import { parseFormGenerationPayload } from './parse-form-generation-payload'
 import type { AiGenerateFormInput, AiGenerateFormOutput, AiProviderAdapter } from '../interface/ai-generation.interface'
-import OpenAI, { AuthenticationError, PermissionDeniedError, RateLimitError, APIConnectionTimeoutError, APIConnectionError } from 'openai'
+import OpenAI, {
+  APIError,
+  RateLimitError,
+  APIConnectionError,
+  AuthenticationError,
+  PermissionDeniedError,
+  APIConnectionTimeoutError,
+} from 'openai'
 
 export type OpenAiCompatibleAdapterOptions = {
   /** Override for OpenAI-compatible providers (e.g. DeepSeek). Omit to hit the OpenAI API itself. */
@@ -11,6 +18,12 @@ export type OpenAiCompatibleAdapterOptions = {
    * DeepSeek's OpenAI-compatible endpoint still expects the older `max_tokens` field.
    */
   maxTokensField: 'max_completion_tokens' | 'max_tokens'
+  /**
+   * `json_schema` (strict structured outputs) is an OpenAI-only feature — DeepSeek's OpenAI-compatible
+   * endpoint only supports the looser `json_object` mode and rejects `json_schema` with a 400.
+   * Defaults to `json_schema` since that's what the OpenAI API itself expects.
+   */
+  responseFormatType?: 'json_schema' | 'json_object'
 }
 
 /**
@@ -26,21 +39,28 @@ export class OpenAiCompatibleAdapter implements AiProviderAdapter {
 
   async generateForm(input: AiGenerateFormInput): Promise<AiGenerateFormOutput> {
     const client = this.createClient(input.apiKey)
-    const maxTokensParam =
-      this.options.maxTokensField === 'max_tokens' ? { max_tokens: input.maxOutputTokens } : { max_completion_tokens: input.maxOutputTokens }
+    
+    const maxTokensParam = this.options.maxTokensField === 'max_tokens' ? 
+    { max_tokens: input.maxOutputTokens } : { max_completion_tokens: input.maxOutputTokens }
+
+    const useJsonObject = this.options.responseFormatType === 'json_object'
+    
+    const systemPrompt = useJsonObject ? 
+    `${input.systemPrompt}\n\nRespond with a single JSON object that strictly follows this JSON schema:\n${JSON.stringify(input.responseSchema)}`
+    : 
+    input.systemPrompt
 
     try {
       const response = await client.chat.completions.create({
         model: input.modelSlug,
         ...maxTokensParam,
         messages: [
-          { role: 'system', content: input.systemPrompt },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: input.prompt },
         ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: { name: 'form_generation', strict: true, schema: input.responseSchema },
-        },
+        response_format: useJsonObject
+          ? { type: 'json_object' }
+          : { type: 'json_schema', json_schema: { name: 'form_generation', strict: true, schema: input.responseSchema } },
         ...(input.supportsTemperature && input.temperature != null ? { temperature: input.temperature } : {}),
         ...(input.supportsTemperature && input.topP != null ? { top_p: input.topP } : {}),
         ...(input.frequencyPenalty != null ? { frequency_penalty: input.frequencyPenalty } : {}),
@@ -73,6 +93,10 @@ export class OpenAiCompatibleAdapter implements AiProviderAdapter {
 
     if (error instanceof APIConnectionTimeoutError || error instanceof APIConnectionError) {
       return new AiProviderError('timeout', 'Could not reach the provider in time')
+    }
+
+    if (error instanceof APIError && error.status === 402) {
+      return new AiProviderError('insufficient_balance', 'The provider account has insufficient balance to complete this request')
     }
 
     const message = error instanceof Error ? error.message : 'Unknown provider error'

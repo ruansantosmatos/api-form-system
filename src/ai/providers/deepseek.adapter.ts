@@ -6,7 +6,7 @@ const DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
 
 @Injectable()
 export class DeepSeekAdapter implements AiProviderAdapter {
-  private readonly delegate = new OpenAiCompatibleAdapter({ baseURL: DEEPSEEK_BASE_URL, maxTokensField: 'max_tokens' })
+  private readonly delegate = new OpenAiCompatibleAdapter({ baseURL: DEEPSEEK_BASE_URL, maxTokensField: 'max_tokens', responseFormatType: 'json_object' })
 
   generateForm(input: AiGenerateFormInput): Promise<AiGenerateFormOutput> {
     return this.delegate.generateForm(input)

@@ -122,6 +122,8 @@ export class FormGenerationService {
         return new UnprocessableEntityException(error.message)
       case 'timeout':
         return new GatewayTimeoutException(error.message)
+      case 'insufficient_balance':
+        return new HttpException(error.message, HttpStatus.PAYMENT_REQUIRED)
       default:
         return new InternalServerErrorException(error.message)
     }

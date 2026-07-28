@@ -47,7 +47,7 @@ export type AiGenerateFormOutput = {
   usage: AiGenerateFormUsage
 }
 
-export type AiProviderErrorKind = 'auth' | 'rate_limit' | 'invalid_output' | 'timeout' | 'unknown'
+export type AiProviderErrorKind = 'auth' | 'rate_limit' | 'invalid_output' | 'timeout' | 'insufficient_balance' | 'unknown'
 
 export interface AiProviderAdapter {
   generateForm(input: AiGenerateFormInput): Promise<AiGenerateFormOutput>
