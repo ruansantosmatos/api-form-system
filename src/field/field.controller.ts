@@ -1,7 +1,9 @@
 import { FormField } from 'src/generated/prisma/client'
-import { FieldService } from './field.service'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
+import { FormFieldService } from './services/form-field.service'
+import { FieldOptionService } from './services/field-option.service'
+import { FieldCatalogService } from './services/field-catalog.service'
 import { createFieldSchema, type CreateFieldDto } from './dto/create-field.dto'
 import { updateFieldsSchema, type UpdateFieldsDto } from './dto/update-field.dto'
 import { createFieldOptionSchema, type CreateFieldOptionDto } from './dto/create-field-option.dto'
@@ -10,48 +12,52 @@ import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Pat
 
 @Controller('forms')
 export class FieldController {
-  constructor(private readonly fieldService: FieldService) {}
+  constructor(
+    private readonly formFieldService: FormFieldService,
+    private readonly fieldOptionService: FieldOptionService,
+    private readonly fieldCatalogService: FieldCatalogService,
+  ) {}
 
   @Get('fields/categories/types')
   async getFieldCategories() {
-    return this.fieldService.getFieldCategories()
+    return this.fieldCatalogService.getFieldCategories()
   }
 
   @Get(':form_id/fields')
   @UseGuards(JwtAuthGuard)
   async getFormFields(@Param('form_id', ParseIntPipe) form_id: number): Promise<FormField[]> {
-    return this.fieldService.getFormFields({ form_id })
+    return this.formFieldService.getFormFields({ form_id })
   }
 
   @Post(':form_id/fields')
   @UseGuards(JwtAuthGuard)
   async createFormField(@Param('form_id', ParseIntPipe) form_id: number, @ZodBody(createFieldSchema) body: CreateFieldDto) {
-    return this.fieldService.createFormField({ form_id, data: body })
+    return this.formFieldService.createFormField({ form_id, data: body })
   }
 
   @Patch(':form_id/fields')
   @UseGuards(JwtAuthGuard)
   async updateFormFields(@Param('form_id', ParseIntPipe) form_id: number, @ZodBody(updateFieldsSchema) body: UpdateFieldsDto) {
-    return this.fieldService.updateFormFields({ form_id, fields: body.fields })
+    return this.formFieldService.updateFormFields({ form_id, fields: body.fields })
   }
 
   @Post(':form_id/fields/:field_id/clone')
   @UseGuards(JwtAuthGuard)
   async cloneFormField(@Param('form_id', ParseIntPipe) form_id: number, @Param('field_id', ParseIntPipe) field_id: number): Promise<FormField> {
-    return this.fieldService.cloneFormField({ form_id, field_id })
+    return this.formFieldService.cloneFormField({ form_id, field_id })
   }
 
   @Delete(':form_id/fields/:field_id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard)
   async deleteFormField(@Param('form_id', ParseIntPipe) form_id: number, @Param('field_id', ParseIntPipe) field_id: number) {
-    await this.fieldService.deleteFormField({ form_id, field_id })
+    await this.formFieldService.deleteFormField({ form_id, field_id })
   }
 
   @Get(':form_id/fields/:field_id/options')
   @UseGuards(JwtAuthGuard)
   async getFieldOptions(@Param('form_id', ParseIntPipe) form_id: number, @Param('field_id', ParseIntPipe) field_id: number) {
-    return this.fieldService.getFieldOptions({ form_id, field_id })
+    return this.fieldOptionService.getFieldOptions({ form_id, field_id })
   }
 
   @Post(':form_id/fields/:field_id/options')
@@ -61,7 +67,7 @@ export class FieldController {
     @Param('field_id', ParseIntPipe) field_id: number,
     @ZodBody(createFieldOptionSchema) body: CreateFieldOptionDto,
   ) {
-    return this.fieldService.createFieldOption({ form_id, field_id, data: body })
+    return this.fieldOptionService.createFieldOption({ form_id, field_id, data: body })
   }
 
   @Patch(':form_id/fields/:field_id/options/:option_id')
@@ -72,7 +78,7 @@ export class FieldController {
     @Param('option_id', ParseIntPipe) option_id: number,
     @ZodBody(updateFieldOptionSchema) body: UpdateFieldOptionDto,
   ) {
-    return this.fieldService.updateFieldOption({ form_id, field_id, option_id, data: body })
+    return this.fieldOptionService.updateFieldOption({ form_id, field_id, option_id, data: body })
   }
 
   @Delete(':form_id/fields/:field_id/options/:option_id')
@@ -83,6 +89,6 @@ export class FieldController {
     @Param('field_id', ParseIntPipe) field_id: number,
     @Param('option_id', ParseIntPipe) option_id: number,
   ) {
-    await this.fieldService.deleteFieldOption({ form_id, field_id, option_id })
+    await this.fieldOptionService.deleteFieldOption({ form_id, field_id, option_id })
   }
 }

@@ -1,9 +1,11 @@
-import { SectionService } from './section.service'
+import { SectionService } from './services/section.service'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
+import { SectionFieldService } from './services/section-field.service'
 import { FormField, FormFieldOption, FormSection } from 'src/generated/prisma/client'
 import { createSectionSchema, type CreateSectionDto } from './dto/create-section.dto'
 import { updateSectionsSchema, type UpdateSectionsDto } from './dto/update-section.dto'
+import { SectionFieldOptionService } from './services/section-field-option.service'
 import { createFieldSchema, type CreateFieldDto } from 'src/field/dto/create-field.dto'
 import { updateFieldsSchema, type UpdateFieldsDto } from 'src/field/dto/update-field.dto'
 import { type SectionWithFields, type SectionFieldWithRelations } from './interface/section.interface'
@@ -13,7 +15,11 @@ import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Pat
 
 @Controller('forms')
 export class SectionController {
-  constructor(private readonly sectionService: SectionService) {}
+  constructor(
+    private readonly sectionService: SectionService,
+    private readonly sectionFieldService: SectionFieldService,
+    private readonly sectionFieldOptionService: SectionFieldOptionService,
+  ) {}
 
   @Get(':form_id/sections')
   @UseGuards(JwtAuthGuard)
@@ -49,7 +55,7 @@ export class SectionController {
     @Param('form_id', ParseIntPipe) form_id: number,
     @Param('section_id', ParseIntPipe) section_id: number,
   ): Promise<FormField[]> {
-    return this.sectionService.getSectionFields({ form_id, section_id })
+    return this.sectionFieldService.getSectionFields({ form_id, section_id })
   }
 
   @Post(':form_id/sections/:section_id/clone')
@@ -68,7 +74,7 @@ export class SectionController {
     @Param('section_id', ParseIntPipe) section_id: number,
     @ZodBody(createFieldSchema) body: CreateFieldDto,
   ): Promise<SectionFieldWithRelations> {
-    return this.sectionService.createSectionField({ form_id, section_id, data: body })
+    return this.sectionFieldService.createSectionField({ form_id, section_id, data: body })
   }
 
   @Patch(':form_id/sections/:section_id/fields')
@@ -78,7 +84,7 @@ export class SectionController {
     @Param('section_id', ParseIntPipe) section_id: number,
     @ZodBody(updateFieldsSchema) body: UpdateFieldsDto,
   ): Promise<FormField[]> {
-    return this.sectionService.updateSectionField({ form_id, section_id, fields: body.fields })
+    return this.sectionFieldService.updateSectionField({ form_id, section_id, fields: body.fields })
   }
 
   @Delete(':form_id/sections/:section_id/fields/:field_id')
@@ -89,7 +95,7 @@ export class SectionController {
     @Param('section_id', ParseIntPipe) section_id: number,
     @Param('field_id', ParseIntPipe) field_id: number,
   ): Promise<void> {
-    await this.sectionService.deleteSectionField({ form_id, section_id, field_id })
+    await this.sectionFieldService.deleteSectionField({ form_id, section_id, field_id })
   }
 
   @Post(':form_id/sections/:section_id/fields/:field_id/clone')
@@ -99,7 +105,7 @@ export class SectionController {
     @Param('section_id', ParseIntPipe) section_id: number,
     @Param('field_id', ParseIntPipe) field_id: number,
   ): Promise<FormField> {
-    return this.sectionService.cloneSectionField({ form_id, section_id, field_id })
+    return this.sectionFieldService.cloneSectionField({ form_id, section_id, field_id })
   }
 
   @Get(':form_id/sections/:section_id/fields/:field_id/options')
@@ -109,7 +115,7 @@ export class SectionController {
     @Param('section_id', ParseIntPipe) section_id: number,
     @Param('field_id', ParseIntPipe) field_id: number,
   ): Promise<FormFieldOption[]> {
-    return this.sectionService.getSectionFieldOptions({ form_id, section_id, field_id })
+    return this.sectionFieldOptionService.getSectionFieldOptions({ form_id, section_id, field_id })
   }
 
   @Patch(':form_id/sections/:section_id/fields/:field_id/options/:option_id')
@@ -121,7 +127,7 @@ export class SectionController {
     @Param('option_id', ParseIntPipe) option_id: number,
     @ZodBody(updateFieldOptionSchema) body: UpdateFieldOptionDto,
   ): Promise<FormFieldOption> {
-    return this.sectionService.updateSectionFieldOption({ form_id, section_id, field_id, option_id, data: body })
+    return this.sectionFieldOptionService.updateSectionFieldOption({ form_id, section_id, field_id, option_id, data: body })
   }
 
   @Delete(':form_id/sections/:section_id/fields/:field_id/options/:option_id')
@@ -133,7 +139,7 @@ export class SectionController {
     @Param('field_id', ParseIntPipe) field_id: number,
     @Param('option_id', ParseIntPipe) option_id: number,
   ): Promise<void> {
-    await this.sectionService.deleteSectionFieldOption({ form_id, section_id, field_id, option_id })
+    await this.sectionFieldOptionService.deleteSectionFieldOption({ form_id, section_id, field_id, option_id })
   }
 
   @Post(':form_id/sections/:source_id/merge/:target_id')
@@ -154,6 +160,6 @@ export class SectionController {
     @Param('field_id', ParseIntPipe) field_id: number,
     @ZodBody(createFieldOptionSchema) body: CreateFieldOptionDto,
   ): Promise<FormFieldOption> {
-    return this.sectionService.createSectionFieldOption({ form_id, section_id, field_id, data: body })
+    return this.sectionFieldOptionService.createSectionFieldOption({ form_id, section_id, field_id, data: body })
   }
 }

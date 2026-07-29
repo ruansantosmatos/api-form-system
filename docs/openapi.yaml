@@ -3,7 +3,7 @@ openapi: 3.0.3
 info:
   title: FormSystem API
   description: API for building forms, publishing them, and collecting/exporting responses.
-  version: 1.0.0
+  version: 1.3.1
 
 servers:
   - url: http://localhost:3001
@@ -120,6 +120,8 @@ components:
       $ref: './schemas/form.yaml#/FormPaginatedResponse'
     CreateFormRequest:
       $ref: './schemas/form.yaml#/CreateFormRequest'
+    GenerateFormRequest:
+      $ref: './schemas/form.yaml#/GenerateFormRequest'
     UpdateFormRequest:
       $ref: './schemas/form.yaml#/UpdateFormRequest'
     FormConfig:
@@ -244,6 +246,8 @@ paths:
 
   /forms:
     $ref: './paths/form.yaml#/root'
+  /forms/generate:
+    $ref: './paths/form.yaml#/generate'
   /forms/{form_id}:
     $ref: './paths/form.yaml#/byId'
   /forms/{form_id}/config:

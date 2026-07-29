@@ -79,6 +79,7 @@ model AccountSettings {
   recovery_email             String?   @db.VarChar(80)
   recovery_email_verified_at DateTime?
   recovery_email_pending     String?   @db.VarChar(80)
+  has_ai_access              Boolean   @default(false)
   created_at                 DateTime? @default(now())
   updated_at                 DateTime?
   user                       User      @relation(fields: [user_id], references: [id])
