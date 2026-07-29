@@ -2,15 +2,16 @@ import { Form } from 'src/generated/prisma/client'
 import { AiUsageService } from 'src/ai/services/ai-usage.service'
 import { CryptoService } from 'src/shared/services/crypto.service'
 import { AiProviderFactory } from 'src/ai/providers/ai-provider.factory'
-import { AiProviderErrorService } from 'src/ai/services/ai-provider-error.service'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
-import type { FieldCategoryWithTypes, FormGenerationServiceGenerate } from '../interface/form.interface'
-import type { AiGenerateFormOutput, FormGenerationPayload } from 'src/ai/interface/ai-generation.interface'
-import { buildFormGenerationSchema, buildFormGenerationSystemPrompt, type FormGenerationCategory } from 'src/ai/prompts/form-generation.prompt'
+import { AiProviderErrorService } from 'src/ai/services/ai-provider-error.service'
+import type { FormGenerationServiceGenerate, PersistFormIA } from '../interface/form.interface'
 import { BadRequestException, Injectable, InternalServerErrorException, UnprocessableEntityException } from '@nestjs/common'
+import type { AiGenerateFormInput, AiGenerateFormOutput, AiUsageLogErrorInput } from 'src/ai/interface/ai-generation.interface'
+import { buildFormGenerationSchema, buildFormGenerationSystemPrompt, type FormGenerationCategory } from 'src/ai/prompts/form-generation.prompt'
 
 const TITLE_MAX_LENGTH = 100
 const LABEL_MAX_LENGTH = 150
+
 
 @Injectable()
 export class FormGenerationService {
@@ -20,9 +21,11 @@ export class FormGenerationService {
     private readonly aiProviderFactory: AiProviderFactory,
     private readonly aiUsageService: AiUsageService,
     private readonly aiProviderErrorService: AiProviderErrorService,
-  ) {}
+  ) { }
 
   async generateForm({ user_id, prompt }: FormGenerationServiceGenerate): Promise<Form> {
+    let output: AiGenerateFormOutput
+
     const activeConfig = await this.prisma.userAiModelConfig.findFirst({
       where: { user_id, is_active: true },
       include: { model: { include: { provider: true } } },
@@ -41,46 +44,53 @@ export class FormGenerationService {
 
     if (categories.length === 0) throw new InternalServerErrorException('No field categories are configured')
 
-    const generationCategories: FormGenerationCategory[] = categories.map(category => ({
+    const mapperCategories = categories.map(category => ({
       name: category.name,
       types: category.fieldTypes.map(type => type.name),
     }))
 
+    const generationCategories: FormGenerationCategory[] = mapperCategories
     const systemPrompt = this.buildSystemPrompt(generationCategories, activeConfig.system_prompt)
+
     const apiKey = this.cryptoService.decrypt(credential.api_key_encrypted)
     const adapter = this.aiProviderFactory.getAdapter(provider.slug)
 
-    let output: AiGenerateFormOutput
-
     try {
-      output = await adapter.generateForm({
+      const input_config: AiGenerateFormInput = {
         apiKey,
-        modelSlug: model.slug,
         prompt,
         systemPrompt,
+        modelSlug: model.slug,
+        topP: activeConfig.top_p?.toNumber() ?? null,
         maxOutputTokens: activeConfig.max_output_tokens,
         supportsTemperature: model.supports_temperature,
         temperature: activeConfig.temperature?.toNumber() ?? null,
-        topP: activeConfig.top_p?.toNumber() ?? null,
-        frequencyPenalty: activeConfig.frequency_penalty?.toNumber() ?? null,
-        presencePenalty: activeConfig.presence_penalty?.toNumber() ?? null,
         responseSchema: buildFormGenerationSchema(generationCategories),
-      })
-    } catch (error) {
-      await this.aiUsageService.logError({
-        user_id,
-        provider_id: provider.id,
-        model_id: model.id,
-        error_message: error instanceof Error ? error.message : 'Unknown error while generating the form',
-      })
+        presencePenalty: activeConfig.presence_penalty?.toNumber() ?? null,
+        frequencyPenalty: activeConfig.frequency_penalty?.toNumber() ?? null
+      }
 
+      output = await adapter.generateForm(input_config)
+    
+    } catch (error) {
+      const model_id = model.id
+      const provider_id = provider.id
+
+      const errorIstance = error instanceof Error
+      const error_message = errorIstance ? error.message : 'Unknown error while generating the form'
+      const log: AiUsageLogErrorInput = { user_id, model_id, provider_id, error_message }
+
+      await this.aiUsageService.logError(log)
       throw this.aiProviderErrorService.toHttpException(error)
     }
 
     const form = await this.persistForm({ user_id, payload: output.payload, categories })
 
     await Promise.all([
-      this.prisma.userAiCredential.update({ where: { id: credential.id }, data: { last_used_at: new Date() } }),
+      this.prisma.userAiCredential.update({ 
+        where: { id: credential.id }, 
+        data: { last_used_at: new Date() } 
+      }),
       this.aiUsageService.logSuccess({
         user_id,
         provider_id: provider.id,
@@ -101,15 +111,7 @@ export class FormGenerationService {
     return `${basePrompt}\n\n---\n\nAdditional instructions from the user, to be followed as long as they don't conflict with the rules above:\n${userSystemPrompt}`
   }
 
-  private async persistForm({
-    user_id,
-    payload,
-    categories,
-  }: {
-    user_id: number
-    payload: FormGenerationPayload
-    categories: FieldCategoryWithTypes[]
-  }): Promise<Form> {
+  private async persistForm({ user_id, payload, categories }: PersistFormIA): Promise<Form> {
     if (payload.sections.length === 0) throw new UnprocessableEntityException('The provider returned a form with no sections')
 
     return this.prisma.$transaction(async tx => {
@@ -139,8 +141,7 @@ export class FormGenerationService {
           if (!category) throw new UnprocessableEntityException(`The provider returned an unknown field category: "${field.category}"`)
 
           const type = category.fieldTypes.find(t => t.name.toLowerCase() === field.type.toLowerCase())
-          if (!type)
-            throw new UnprocessableEntityException(`The provider returned an unknown field type "${field.type}" for category "${field.category}"`)
+          if (!type) throw new UnprocessableEntityException(`The provider returned an unknown field type "${field.type}" for category "${field.category}"`)
 
           const createdField = await tx.formField.create({
             data: {
