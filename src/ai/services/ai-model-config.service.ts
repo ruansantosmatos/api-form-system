@@ -1,3 +1,4 @@
+import { AiAccessService } from './ai-access.service'
 import { toModelConfigResult } from '../mappers/ai-result.mapper'
 import { PrismaClientService } from 'src/shared/services/prisma-client.service'
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
@@ -12,7 +13,10 @@ import type {
 
 @Injectable()
 export class AiModelConfigService {
-  constructor(private readonly prisma: PrismaClientService) {}
+  constructor(
+    private readonly prisma: PrismaClientService,
+    private readonly aiAccessService: AiAccessService,
+  ) {}
 
   async getActiveModel(user_id: number): Promise<AiActiveModelResult> {
     const config = await this.prisma.userAiModelConfig.findFirst({
@@ -33,21 +37,23 @@ export class AiModelConfigService {
 
     if (!credential) throw new BadRequestException('Add the provider API key before activating one of its models')
 
-    return this.prisma.$transaction(async tx => {
+    const config = await this.prisma.$transaction(async tx => {
       await tx.userAiModelConfig.updateMany({
         where: { user_id, is_active: true },
         data: { is_active: false, updated_at: new Date() },
       })
 
-      const config = await tx.userAiModelConfig.upsert({
+      return tx.userAiModelConfig.upsert({
         where: { user_id_model_id: { user_id, model_id } },
         create: { user_id, model_id, max_output_tokens: model.max_output_tokens, is_active: true },
         update: { is_active: true, updated_at: new Date() },
         include: { model: { include: { provider: true } } },
       })
-
-      return toModelConfigResult(config)
     })
+
+    await this.aiAccessService.syncAccess(user_id)
+
+    return toModelConfigResult(config)
   }
 
   async deactivateModel(user_id: number): Promise<AiMessageResult> {
@@ -57,6 +63,9 @@ export class AiModelConfigService {
     })
 
     if (!count) throw new BadRequestException('No AI model is currently in use')
+
+    await this.aiAccessService.syncAccess(user_id)
+
     return { message: 'AI model deactivated successfully.' }
   }
 
@@ -65,8 +74,8 @@ export class AiModelConfigService {
       where: { user_id_model_id: { user_id, model_id } },
       include: { model: { include: { provider: true } } },
     })
-    if (!config) throw new NotFoundException('AI model config not found')
 
+    if (!config) throw new NotFoundException('AI model config not found')
     return toModelConfigResult(config)
   }
 

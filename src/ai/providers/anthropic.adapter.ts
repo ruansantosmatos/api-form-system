@@ -3,6 +3,7 @@ import { AiProviderError } from './ai-provider.error'
 import { parseFormGenerationPayload } from './parse-form-generation-payload'
 import type { AiGenerateFormInput, AiGenerateFormOutput, AiProviderAdapter } from '../interface/ai-generation.interface'
 import Anthropic, {
+  APIError,
   AuthenticationError,
   PermissionDeniedError,
   RateLimitError,
@@ -61,6 +62,10 @@ export class AnthropicAdapter implements AiProviderAdapter {
 
     if (error instanceof APIConnectionTimeoutError || error instanceof APIConnectionError) {
       return new AiProviderError('timeout', 'Could not reach the provider in time')
+    }
+
+    if (error instanceof APIError && error.status === 402) {
+      return new AiProviderError('insufficient_balance', 'The provider account has insufficient balance to complete this request')
     }
 
     const message = error instanceof Error ? error.message : 'Unknown provider error'

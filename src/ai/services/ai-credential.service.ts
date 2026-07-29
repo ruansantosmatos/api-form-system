@@ -1,3 +1,4 @@
+import { AiAccessService } from './ai-access.service'
 import { CryptoService } from 'src/shared/services/crypto.service'
 import { AI_API_KEY_PATTERN } from 'src/shared/consts/ai-provider'
 import { toCredentialResult } from '../mappers/ai-result.mapper'
@@ -10,6 +11,7 @@ export class AiCredentialService {
   constructor(
     private readonly prisma: PrismaClientService,
     private readonly cryptoService: CryptoService,
+    private readonly aiAccessService: AiAccessService,
   ) {}
 
   async getCredentials(user_id: number): Promise<AiCredentialResult[]> {
@@ -62,5 +64,7 @@ export class AiCredentialService {
 
       await tx.userAiCredential.delete({ where: { id: credential.id } })
     })
+
+    await this.aiAccessService.syncAccess(user_id)
   }
 }

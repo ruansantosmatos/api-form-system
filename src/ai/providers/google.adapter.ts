@@ -54,6 +54,10 @@ export class GoogleAdapter implements AiProviderAdapter {
         return new AiProviderError('rate_limit', 'The provider is rate-limiting this API key')
       }
 
+      if (error.status === 402) {
+        return new AiProviderError('insufficient_balance', 'The provider account has insufficient balance to complete this request')
+      }
+
       if (error.status >= 500) {
         return new AiProviderError('timeout', 'The provider is temporarily unavailable')
       }
