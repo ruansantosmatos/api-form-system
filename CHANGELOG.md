@@ -4,30 +4,18 @@ Todas as mudanças relevantes deste projeto são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/), e o versionamento segue [SemVer](https://semver.org/lang/pt-BR/).
 
-## [Unreleased]
+## [1.2.3] - 2026-08-01
 
-### Removed
+### Fixed
 
-- Módulo `ai` por completo: rotas `GET /ai/providers`, `GET /ai/credentials`, `PUT|DELETE /ai/providers/{provider_id}/credential`, `GET|DELETE /ai/models/active`, `POST /ai/models/{model_id}/activate` e `GET|PATCH /ai/models/{model_id}/config`
-- Endpoint `POST /forms/generate` e a geração de formulário a partir de prompt
-- Tabelas `ai_providers`, `ai_models`, `user_ai_credentials`, `user_ai_model_configs` e `ai_usage_logs`, e a coluna `has_ai_access` de `account_settings` (removida também da resposta de `GET /account/settings`)
-- Seed de provedores e modelos de IA, e as dependências `@anthropic-ai/sdk`, `@google/genai` e `openai`
-
-## [1.3.1] - 2026-07-29
-
-### Added
-
-- Novo módulo `ai`: catálogo de provedores (OpenAI, Anthropic, Google e DeepSeek) com seus modelos, cadastro/remoção de credenciais (API key) por provedor, ativação de um único modelo por usuário e configuração de parâmetros de geração (`temperature`, `top_p`, `max_output_tokens`, `presence_penalty`, `frequency_penalty`, prompt de sistema adicional)
-- Endpoint `POST /forms/generate`: gera um formulário completo (título, descrição, seções, campos e opções) a partir de um prompt em linguagem natural, usando o modelo de IA ativo do usuário
-- Criptografia AES-256-GCM para as chaves de API armazenadas (`UserAiCredential`), descriptografadas apenas no momento do uso
-- Registro de uso por chamada de IA (tokens de entrada/saída e custo estimado por milhão de tokens) e log de erros de provedor (`AiUsageLog`)
-- Flag `has_ai_access` em `AccountSettings`, sincronizada automaticamente conforme o usuário possui um modelo de IA ativo
+- Recuperação de senha (`POST /auth/forgot-password`) agora aceita também o e-mail de recuperação verificado em `account_settings`, e não apenas o e-mail da conta, permitindo recuperar o acesso após a perda da caixa principal
+- O link de redefinição passa a ser enviado ao endereço informado na requisição, em vez de sempre para o e-mail da conta
+- E-mails de recuperação pendentes (não verificados) são ignorados, de modo que o endereço só funciona após a confirmação por código
 
 ### Changed
 
 - Services de `auth`, `account`, `form`, `field`, `image`, `publication`, `section` e `submission` reorganizados por responsabilidade (ex.: `auth` dividido em password/oauth/session; `submission` em query/export), sem alteração de contrato público das rotas
-- Tratamento de erros de provedores de IA padronizado, convertendo falhas de API externas em respostas HTTP consistentes
-- Documentação OpenAPI atualizada com o módulo `ai` e os schemas/params afetados pela reorganização de services
+- Documentação OpenAPI atualizada com os schemas/params afetados pela reorganização de services
 
 ## [1.0.0] - 2026-07-23
 
