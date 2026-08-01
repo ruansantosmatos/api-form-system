@@ -16,8 +16,6 @@ Principais capacidades:
 
 - **Formulários dinâmicos** — seções, campos tipados (texto, opções, etc.), reordenação, clonagem e mesclagem de seções
 
-- **Geração de formulário via IA** — um prompt em linguagem natural gera título, seções, campos e opções, usando a credencial e o modelo (OpenAI, Anthropic, Google ou DeepSeek) que o próprio usuário configurou
-
 - **Publicação pública** — cada formulário publicado ganha um link único, respeitando regras de disponibilidade, limite de respostas e respostas anônimas
 
 - **Coleta e exportação de respostas** — submissões versionáveis por respondente e exportação em CSV enviada por e-mail
@@ -49,8 +47,7 @@ Principais capacidades:
 | Autenticação              | JWT (access + refresh) em cookie httpOnly, OAuth2 (Google/GitHub), TOTP (2FA) |
 | Armazenamento de arquivos | Cloudflare R2 (S3-compatible), via URLs pré-assinadas                         |
 | E-mail                    | Resend                                                                        |
-| Provedores de IA          | OpenAI, Anthropic (`@anthropic-ai/sdk`), Google (`@google/genai`) e DeepSeek (via adaptador OpenAI-compatible) |
-| Criptografia de segredos  | AES-256-GCM (Node `crypto`), aplicada às credenciais de IA armazenadas        |
+| Criptografia de segredos  | AES-256-GCM (Node `crypto`), aplicada aos segredos de 2FA (TOTP) armazenados  |
 | Rate limiting             | `@nestjs/throttler`, escopado nas rotas sensíveis                             |
 | Documentação da API       | OpenAPI 3 (YAML manual, modular) + Swagger UI                                 |
 | Containerização           | Docker multi-stage + docker-compose                                           |
@@ -67,9 +64,9 @@ Principais capacidades:
 
 - **Rate limiting escopado, não global** — o `ThrottlerGuard` só é aplicado nas rotas sensíveis a força bruta (login, registro, reset de senha), poupando as rotas de leitura comuns desse custo. Ver [detalhes](ARCHITECTURE.md#decisões-de-arquitetura).
 
-- **Credenciais de IA cifradas em repouso** — a API key de cada provedor é cifrada com AES-256-GCM antes de ser persistida e só é descriptografada em memória no momento de uma chamada ao provedor; a listagem de credenciais nunca expõe a chave completa. Ver [detalhes](ARCHITECTURE.md#geração-de-formulário-via-ia).
+- **Segredos de 2FA cifrados em repouso** — o segredo TOTP de cada usuário é cifrado com AES-256-GCM antes de ser persistido e só é descriptografado em memória no momento da validação de um código.
 
-O mapa de módulos está na seção [🏗️ Arquitetura](#️-arquitetura) abaixo. O modelo de dados completo e os diagramas de cada fluxo (autenticação, publicação, submissão, geração via IA) estão em [ARCHITECTURE.md](ARCHITECTURE.md).
+O mapa de módulos está na seção [🏗️ Arquitetura](#️-arquitetura) abaixo. O modelo de dados completo e os diagramas de cada fluxo (autenticação, publicação, submissão) estão em [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## 🚀 Como rodar o projeto
 
@@ -113,7 +110,7 @@ Todas as variáveis estão listadas em [.example-env](.example-env). Principais 
 | -------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | App            | `NODE_ENV`, `PORT`, `APP_NAME`, `CLIENT_URL`, `CORS_ORIGINS`, `COOKIE_DOMAIN`                           | Configuração geral e CORS/cookies                                    |
 | Banco de dados | `DATABASE_URL`, `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME` | Conexão MariaDB via Prisma                                           |
-| Autenticação   | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`, `APP_ENCRYPTION_KEY`    | Assinatura de tokens e criptografia de segredos (2FA, credenciais de IA) |
+| Autenticação   | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`, `APP_ENCRYPTION_KEY`    | Assinatura de tokens e criptografia de segredos (2FA)                |
 | OAuth          | `GOOGLE_CLIENT_ID/SECRET/CALLBACK_URL`, `GITHUB_CLIENT_ID/SECRET/CALLBACK_URL`                          | Login social                                                         |
 | E-mail         | `RESEND_API_KEY`, `MAIL_FROM`                                                                           | Envio de e-mails transacionais (reset de senha, export de respostas) |
 | Armazenamento  | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_API_TOKEN`, `R2_BUCKET`                | Upload de imagens via Cloudflare R2                                  |
@@ -136,8 +133,7 @@ Cada domínio é um módulo Nest independente em `src/<module>`, seguindo sempre
 |---|---|
 | `auth` | Login/registro por senha, sessões, OAuth (Google/GitHub), recuperação de senha, desafio de 2FA no login |
 | `account` | Configurações de segurança da conta já autenticada: e-mail de recuperação, ativação/desativação de 2FA (TOTP) |
-| `ai` | Catálogo de provedores/modelos de IA, credenciais por usuário (cifradas), ativação/configuração de modelo e registro de uso |
-| `form` | CRUD de formulários, sua configuração (`FormConfig`: janela de disponibilidade, limite de respostas, etc.) e geração via prompt de IA |
+| `form` | CRUD de formulários e sua configuração (`FormConfig`: janela de disponibilidade, limite de respostas, etc.) |
 | `section` | Seções de um formulário (agrupam campos) |
 | `field` | Campos (perguntas) de um formulário/seção e suas opções |
 | `image` | Upload de imagem para campo ou seção via URL pré-assinada (R2) |
@@ -145,7 +141,7 @@ Cada domínio é um módulo Nest independente em `src/<module>`, seguindo sempre
 | `submission` | Recebe respostas de um formulário publicado e exporta respostas em CSV por e-mail |
 | `shared` | Guards, decorators, services (Prisma, e-mail, R2, tokens, 2FA, criptografia AES-256-GCM) e utils reaproveitados por todos os módulos acima |
 
-Modelo de dados (diagrama ER), diagramas de sequência de cada fluxo (autenticação, sessões/refresh, OAuth, publicação/submissão, upload de imagens, geração de formulário via IA) e as decisões de arquitetura por trás deles estão documentados em **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+Modelo de dados (diagrama ER), diagramas de sequência de cada fluxo (autenticação, sessões/refresh, OAuth, publicação/submissão, upload de imagens) e as decisões de arquitetura por trás deles estão documentados em **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 ## 📜 Scripts disponíveis
 
