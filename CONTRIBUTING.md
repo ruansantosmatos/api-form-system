@@ -50,7 +50,7 @@ Formato: `<emoji> <tipo>(<escopo opcional>): <descrição no imperativo>`
 | ⚙️    | `chore`    | Configuração de projeto, setup inicial, tarefas de manutenção           |
 | 🔀    | —          | Reservado para commits de merge (gerados pelo GitHub ao aceitar um PR)  |
 
-O escopo entre parênteses é o(s) módulo(s) afetado(s) — `auth`, `account`, `ai`, `form`, `section`, `field`, `image`, `publication`, `submission`, `docs`, `docker`... Múltiplos módulos são separados por vírgula, sem espaço.
+O escopo entre parênteses é o(s) módulo(s) afetado(s) — `auth`, `account`, `form`, `section`, `field`, `image`, `publication`, `submission`, `docs`, `docker`... Múltiplos módulos são separados por vírgula, sem espaço.
 
 <details>
 <summary>Exemplos reais do histórico</summary>
@@ -67,7 +67,7 @@ O escopo entre parênteses é o(s) módulo(s) afetado(s) — `auth`, `account`, 
 ## ✅ Antes de abrir um Pull Request
 
 - [ ] `npm run lint` e `npm run test` passam localmente
-- [ ] `npm run test:e2e` passa, se a mudança envolve um fluxo completo (auth, publicação, submissão, geração via IA)
+- [ ] `npm run test:e2e` passa, se a mudança envolve um fluxo completo (auth, publicação, submissão)
 
 Se a mudança adiciona ou altera uma rota:
 
@@ -78,7 +78,7 @@ Se a mudança adiciona ou altera uma rota:
   ```
 - [ ] Confirmou que toda rota pública (sem autenticação) define `security: []` explicitamente no YAML
 
-Se a mudança afeta um fluxo documentado em [ARCHITECTURE.md](ARCHITECTURE.md) (autenticação, sessões, OAuth, publicação, upload de imagens, geração via IA):
+Se a mudança afeta um fluxo documentado em [ARCHITECTURE.md](ARCHITECTURE.md) (autenticação, sessões, OAuth, publicação, upload de imagens):
 
 - [ ] Atualizou o diagrama e o texto correspondentes
 

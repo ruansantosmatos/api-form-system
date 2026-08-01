@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { AiModule } from './ai/ai.module'
 import { AuthModule } from './auth/auth.module'
 import { FormModule } from './form/form.module'
 import { FieldModule } from './field/field.module'
@@ -20,7 +19,6 @@ import { PrismaClientModule } from './shared/modules/prisma-client.module'
   controllers: [],
   providers: [],
   imports: [
-    AiModule,
     AuthModule,
     FormModule,
     FieldModule,
