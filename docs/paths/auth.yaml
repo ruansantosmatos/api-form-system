@@ -241,8 +241,11 @@ forgotPassword:
     tags: [Auth]
     summary: Request a password reset email
     description: >
-      Always returns the same message regardless of whether the email is registered, to avoid
-      user enumeration. If the account exists, emails a reset link valid for 1 hour.
+      Accepts either the account email or a verified recovery email configured in the account
+      settings, and sends the reset link to the address informed in the request. Pending
+      (unverified) recovery emails are ignored. Always returns the same message regardless of
+      whether the email is registered, to avoid user enumeration. If the account exists, emails
+      a reset link valid for 1 hour.
     security: []
     requestBody:
       required: true
