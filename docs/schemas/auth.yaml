@@ -62,6 +62,7 @@ AuthForgotPasswordRequest:
     email:
       type: string
       format: email
+      description: Account email or a verified recovery email.
       example: jane@example.com
 
 AuthResetPasswordRequest:
