@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from 'crypto'
 import { ConfigService } from '@nestjs/config'
+import { User } from 'src/generated/prisma/client'
 import { AUTH_METHOD } from 'src/shared/consts/auth-method'
 import { MailService } from 'src/shared/services/mail.service'
 import { TokenService } from 'src/shared/services/token.service'
@@ -97,10 +98,25 @@ export class AuthPasswordService {
 
   async forgotPassword({ email }: AuthServiceForgotPassword): Promise<AuthForgotPasswordResult> {
     const message = 'If an account with that email exists, a password reset link has been sent.'
+    const users = await this.findUsersByRecoverableEmail(email)
+
+    for (const user of users) await this.sendPasswordResetEmail(user, email)
+    return { message }
+  }
+
+  private async findUsersByRecoverableEmail(email: string): Promise<User[]> {
     const user = await this.prisma.user.findUnique({ where: { email } })
 
-    if (!user) return { message }
+    const accountSettings = await this.prisma.accountSettings.findMany({
+      where: { recovery_email: email, recovery_email_verified_at: { not: null } },
+      include: { user: true },
+    })
 
+    const users = [...(user ? [user] : []), ...accountSettings.map((settings) => settings.user)]
+    return users.filter((candidate, index) => users.findIndex((other) => other.id === candidate.id) === index)
+  }
+
+  private async sendPasswordResetEmail(user: User, to: string): Promise<void> {
     const token = randomBytes(32).toString('hex')
     const tokenHash = createHash('sha256').update(token).digest('hex')
     const expiresAt = new Date(Date.now() + TOKENS_EXPIRES.PASSWORD_RESET)
@@ -112,7 +128,7 @@ export class AuthPasswordService {
     const expiresInHours = TOKENS_EXPIRES.PASSWORD_RESET / (60 * 60 * 1000)
 
     await this.mailService.send({
-      to: user.email,
+      to,
       subject: 'Alteração de senha',
       template: {
         id: 'password-reset-1',
@@ -124,8 +140,6 @@ export class AuthPasswordService {
         },
       },
     })
-
-    return { message }
   }
 
   async resetPassword({ token, password }: AuthServiceResetPassword): Promise<AuthResetPasswordResult> {
