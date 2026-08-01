@@ -2,14 +2,12 @@ import { Form } from 'src/generated/prisma/client'
 import { FormService } from './services/form.service'
 import { JwtAuthGuard } from 'src/shared/guards/jwt-auth.guard'
 import { FormConfigService } from './services/form-config.service'
-import { FormGenerationService } from './services/form-generation.service'
 import { ZodBody } from 'src/shared/decorators/zod-body.decorator'
 import { ZodQuery } from 'src/shared/decorators/zod-query.decorator'
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator'
 import { createFormSchema, type CreateFormDto } from './dto/create-form.dto'
 import { updateFormSchema, type UpdateFormDto } from './dto/update-form.dto'
 import { getAllFormsSchema, type GetAllFormsDto } from './dto/get-all-forms.dto'
-import { generateFormSchema, type GenerateFormDto } from './dto/generate-form.dto'
 import { updateFormConfigSchema, type UpdateFormConfigDto } from './dto/update-form-config.dto'
 import { type FormPaginatedResult, type FormFavoriteResult, type FormConfig } from './interface/form.interface'
 import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common'
@@ -19,7 +17,6 @@ export class FormController {
   constructor(
     private readonly formService: FormService,
     private readonly formConfigService: FormConfigService,
-    private readonly formGenerationService: FormGenerationService,
   ) {}
 
   @Get()
@@ -32,12 +29,6 @@ export class FormController {
   @UseGuards(JwtAuthGuard)
   async create(@ZodBody(createFormSchema) body: CreateFormDto): Promise<Form> {
     return this.formService.create({ data: body })
-  }
-
-  @Post('generate')
-  @UseGuards(JwtAuthGuard)
-  async generate(@CurrentUser() user_id: number, @ZodBody(generateFormSchema) body: GenerateFormDto): Promise<Form> {
-    return this.formGenerationService.generateForm({ user_id, ...body })
   }
 
   @Get(':form_id')

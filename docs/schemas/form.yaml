@@ -90,19 +90,6 @@ CreateFormRequest:
       type: string
       maxLength: 200
 
-GenerateFormRequest:
-  type: object
-  required: [prompt]
-  description: >
-    Generates a Form (with sections, fields and options) from a natural-language prompt using
-    the caller's active AI model and stored API key.
-  properties:
-    prompt:
-      type: string
-      minLength: 10
-      maxLength: 4000
-      example: A customer satisfaction survey with a 1-5 rating and an open comments field
-
 UpdateFormRequest:
   type: object
   description: At least one property must be provided.

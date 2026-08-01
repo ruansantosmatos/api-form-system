@@ -1,8 +1,7 @@
 import type { CreateFormDto } from '../dto/create-form.dto'
 import type { UpdateFormDto } from '../dto/update-form.dto'
-import { Form, FormConfig, Prisma } from 'src/generated/prisma/client'
+import { Form, FormConfig } from 'src/generated/prisma/client'
 import type { UpdateFormConfigDto } from '../dto/update-form-config.dto'
-import { FormGenerationPayload } from 'src/ai/interface/ai-generation.interface'
 
 export interface FormServiceCreate {
   data: CreateFormDto
@@ -41,13 +40,6 @@ export interface FormServiceGetFormConfig {
   form_id: number
 }
 
-export interface FormGenerationServiceGenerate {
-  user_id: number
-  prompt: string
-}
-
-export type FieldCategoryWithTypes = Prisma.FieldCategoryGetPayload<{ include: { fieldTypes: true } }>
-
 export interface FormServiceUpdateFormConfig {
   form_id: number
   user_id: number
@@ -59,12 +51,6 @@ export type { FormConfig }
 export type FormFavoriteResult = Pick<Form, 'id' | 'is_favorite'>
 
 export type FormSummary = Pick<Form, 'id' | 'title' | 'description' | 'published' | 'is_favorite' | 'created_at' | 'updated_at' | 'last_opened_at'>
-
-export type PersistFormIA = {
-  user_id: number, 
-  payload: FormGenerationPayload, 
-  categories: FieldCategoryWithTypes[]
-}
 
 export type FormPaginatedResult = {
   data: FormSummary[]

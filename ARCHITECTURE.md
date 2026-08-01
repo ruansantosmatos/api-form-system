@@ -10,7 +10,6 @@ Como e por quê o FormSystem API foi construído da forma como está — não re
 - [Login social (OAuth)](#login-social-oauth)
 - [Publicação e resposta de formulários](#publicação-e-resposta-de-formulários)
 - [Upload de imagens](#upload-de-imagens)
-- [Geração de formulário via IA](#geração-de-formulário-via-ia)
 - [Decisões de arquitetura](#decisões-de-arquitetura)
 
 ## Modelo de dados
@@ -25,12 +24,6 @@ erDiagram
     User ||--o| TwoFactorAuth : "configura"
     User ||--o| AccountSettings : "tem"
     User ||--o{ FormSubmission : "responde (opcional)"
-    User ||--o{ UserAiCredential : "cadastra"
-    User ||--o{ UserAiModelConfig : "configura"
-
-    AiProvider ||--o{ AiModel : "oferece"
-    AiProvider ||--o{ UserAiCredential : "recebe credencial"
-    AiModel ||--o{ UserAiModelConfig : "é configurado em"
 
     Form ||--o| FormConfig : "tem"
     Form ||--o| FormPublication : "tem"
@@ -55,8 +48,6 @@ Pontos que não são óbvios olhando só o schema:
 - `FormField.form_id` **e** `FormField.section_id` são opcionais e mutuamente relevantes: um campo pertence a um formulário diretamente (fora de seções) ou a uma seção — nunca precisa dos dois para existir.
 - `Image` é dona da FK (`field_id` / `section_id`), não o contrário — por isso um campo/seção tem no máximo uma imagem (`@unique` nas duas colunas).
 - `FormSubmission.respondent_id` é opcional: `FormConfig.allow_anonymous` decide se a resposta pode ser criada sem usuário autenticado.
-- `UserAiModelConfig` tem `@@unique([user_id, model_id])` e `is_active`: o usuário pode ter configurações salvas para vários modelos, mas só uma pode estar ativa por vez (aplicado em código, não por constraint de banco). `UserAiCredential` é `@@unique([user_id, provider_id])` — uma credencial por provedor por usuário, sobrescrita em upsert.
-- `AiUsageLog` (não representado no diagrama para não poluir) registra cada chamada de geração — sucesso (tokens e custo) ou falha (`error_message`) — usada para auditoria e não para controle de acesso.
 
 ## Fluxo de autenticação
 
@@ -198,39 +189,6 @@ sequenceDiagram
 
 Cada campo/seção tem no máximo uma imagem: um novo upload substitui (upsert) a anterior e remove o objeto antigo do bucket, evitando lixo órfão no R2.
 
-## Geração de formulário via IA
-
-O usuário cadastra sua própria credencial (API key) por provedor e ativa um único modelo; a geração usa essa credencial e essa configuração para transformar um prompt em um formulário completo:
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant F as FormController
-    participant G as FormGenerationService
-    participant P as Provider (OpenAI/Anthropic/Google/DeepSeek)
-    participant DB as MariaDB
-
-    C->>F: POST /forms/generate {prompt}
-    F->>G: generateForm()
-    G->>DB: busca UserAiModelConfig ativo + UserAiCredential do provedor
-    alt sem modelo ativo ou sem credencial
-        G-->>C: 400 Bad Request
-    else configurado
-        G->>G: descriptografa a API key (AES-256-GCM)
-        G->>P: chama o modelo com prompt + schema esperado (título, seções, campos, opções)
-        alt provedor falha
-            G->>DB: AiUsageLog {status: error, error_message}
-            G-->>C: exceção HTTP mapeada do erro do provedor
-        else provedor responde
-            G->>DB: cria Form + FormSection(s) + FormField(s) + FormFieldOption(s) em transação
-            G->>DB: AiUsageLog {status: success, input/output tokens, custo estimado}
-            G-->>C: 201 Form criado
-        end
-    end
-```
-
-Categorias e tipos de campo retornados pelo provedor são validados contra `FieldCategory`/`FieldType` antes de persistir — um valor não reconhecido derruba a geração inteira (`422 Unprocessable Entity`) em vez de criar um formulário parcialmente inconsistente.
-
 ## Decisões de arquitetura
 
 - **Zod em vez de `class-validator`**: validação via `ZodBody`/`ZodQuery` (decorators customizados em `shared/decorators`), o que centraliza schema + tipo (`z.infer`) num único arquivo por DTO. Isso muda o formato de erro de validação: `ValidationErrorResponse` retorna `message` como objeto (`{ "campo": "mensagem" }`), não string — ver `docs/schemas/common.yaml`.
@@ -242,7 +200,3 @@ Categorias e tipos de campo retornados pelo provedor são validados contra `Fiel
 - **Refresh token rotation com detecção de reuso**: cada refresh invalida o token anterior; se um token já usado for reapresentado, a sessão inteira é revogada (`SUSPICIOUS_TOKEN_REUSE`) em vez de apenas rejeitar a requisição — limita o dano de um refresh token vazado/roubado.
 
 - **Presigned URLs para upload/download de imagem**: a API nunca lê/grava o binário — apenas gera credenciais temporárias de acesso ao R2. Reduz carga no processo Node e evita limites de tamanho de payload no Express.
-
-- **Adaptador por provedor de IA (`AiProviderFactory`)**: cada provedor (OpenAI, Anthropic, Google, DeepSeek) implementa a mesma interface de geração; DeepSeek reaproveita o SDK `openai` via adaptador OpenAI-compatible. Erros de qualquer adaptador passam por `AiProviderErrorService`, que os normaliza em exceções HTTP consistentes antes de chegar ao client.
-
-- **Uma credencial e um modelo ativo por usuário**: `UserAiCredential` é única por `(user_id, provider_id)` e `UserAiModelConfig.is_active` é controlado em código para garantir no máximo um modelo ativo por usuário — evita ambiguidade sobre qual credencial/modelo usar numa geração.

@@ -4,6 +4,15 @@ Todas as mudanças relevantes deste projeto são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/), e o versionamento segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Unreleased]
+
+### Removed
+
+- Módulo `ai` por completo: rotas `GET /ai/providers`, `GET /ai/credentials`, `PUT|DELETE /ai/providers/{provider_id}/credential`, `GET|DELETE /ai/models/active`, `POST /ai/models/{model_id}/activate` e `GET|PATCH /ai/models/{model_id}/config`
+- Endpoint `POST /forms/generate` e a geração de formulário a partir de prompt
+- Tabelas `ai_providers`, `ai_models`, `user_ai_credentials`, `user_ai_model_configs` e `ai_usage_logs`, e a coluna `has_ai_access` de `account_settings` (removida também da resposta de `GET /account/settings`)
+- Seed de provedores e modelos de IA, e as dependências `@anthropic-ai/sdk`, `@google/genai` e `openai`
+
 ## [1.3.1] - 2026-07-29
 
 ### Added
